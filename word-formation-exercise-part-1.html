@@ -110,10 +110,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, Timestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG (DO NOT EDIT) ---
-        // PASTE YOUR FIREBASE CONFIG HERE
+        // --- FIREBASE CONFIG (DÁN MÃ CỦA BẠN VÀO ĐÂY) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
             authDomain: "on-thi-lop-9.firebaseapp.com",
@@ -263,18 +262,12 @@
             leaderboardArea.classList.remove('hidden');
             leaderboardList.innerHTML = '<p class="text-center text-slate-500">Đang tải bảng xếp hạng...</p>';
             try {
-                const submissionsCol = collection(db, `submissions`);
-                const snapshot = await getDocs(submissionsCol);
+                const submissionsCol = collection(db, 'submissions');
+                const q = query(submissionsCol, orderBy("score", "desc"), orderBy("submittedAt", "asc"), limit(5));
+                const snapshot = await getDocs(q);
                 
-                const submissions = [];
-                snapshot.forEach(doc => { submissions.push(doc.data()); });
-
-                submissions.sort((a, b) => {
-                    if (b.score !== a.score) return b.score - a.score;
-                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
-                });
-
-                const top5 = submissions.slice(0, 5);
+                const top5 = [];
+                snapshot.forEach(doc => { top5.push(doc.data()); });
 
                 if (top5.length === 0) {
                     leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
@@ -321,16 +314,12 @@
             submissionsDashboard.classList.remove('hidden');
 
             try {
-                const submissionsCol = collection(db, `submissions`);
-                const snapshot = await getDocs(submissionsCol);
+                const submissionsCol = collection(db, 'submissions');
+                const q = query(submissionsCol, orderBy("score", "desc"), orderBy("submittedAt", "asc"));
+                const snapshot = await getDocs(q);
 
                 const submissions = [];
                 snapshot.forEach(doc => { submissions.push(doc.data()); });
-
-                submissions.sort((a, b) => {
-                    if (b.score !== a.score) return b.score - a.score;
-                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
-                });
 
                 if (submissions.length === 0) {
                     noSubmissionsMsg.classList.remove('hidden');
