@@ -16,7 +16,7 @@
         .btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); }
         .btn-secondary { background-color: #64748b; color: white; }
         .btn-secondary:hover { background-color: #475569; }
-        .disabled { opacity: 0.5; cursor: not-allowed; }
+        .disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         .hidden { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
@@ -112,16 +112,18 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- FIREBASE CONFIG (DO NOT EDIT) ---
+        // PASTE YOUR FIREBASE CONFIG HERE
         const firebaseConfig = {
-  apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
-  authDomain: "on-thi-lop-9.firebaseapp.com",
-  projectId: "on-thi-lop-9",
-  storageBucket: "on-thi-lop-9.firebasestorage.app",
-  messagingSenderId: "936307604820",
-  appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
-  measurementId: "G-EZCY46FJZV"
-};
-
+            apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
+            authDomain: "on-thi-lop-9.firebaseapp.com",
+            projectId: "on-thi-lop-9",
+            storageBucket: "on-thi-lop-9.appspot.com",
+            messagingSenderId: "936307604820",
+            appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
+            measurementId: "G-EZCY46FJZV"
+        };
+        
         // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -163,7 +165,7 @@
 
         signInAnonymously(auth).catch(error => {
             console.error("Anonymous sign-in failed:", error);
-            loadingDiv.innerHTML = "<p>Lỗi kết nối. Vui lòng tải lại trang.</p>";
+            loadingDiv.innerHTML = "<p>Lỗi kết nối. Vui lòng kiểm tra lại cấu hình Firebase và đảm bảo đã thêm domain vào Authorized Domains.</p>";
         });
 
         // --- QUIZ DATA & LOGIC ---
@@ -206,7 +208,7 @@
 
         async function submitAndSaveAnswers() {
             submitBtn.classList.add('disabled');
-            submitBtn.textContent = 'Đang nộp bài...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang nộp bài...';
 
             let score = 0;
             const userAnswers = [];
@@ -218,7 +220,7 @@
             });
             
             try {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/submissions`), {
+                await addDoc(collection(db, `submissions`), {
                     studentName: displayStudentName.textContent,
                     userId: currentUserId,
                     score: score,
@@ -226,13 +228,14 @@
                     answers: userAnswers,
                     submittedAt: Timestamp.now()
                 });
+                displayResults(score, userAnswers);
+                showLeaderboard();
             } catch (error) {
                 console.error("Error writing document: ", error);
-                // Handle error with a custom message if possible
-                return;
+                alert("Đã có lỗi xảy ra khi nộp bài. Vui lòng kiểm tra lại kết nối và thử lại.");
+                submitBtn.classList.remove('disabled');
+                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Nộp bài & Xem kết quả';
             }
-            displayResults(score, userAnswers);
-            showLeaderboard();
         }
 
         function displayResults(score, userAnswers) {
@@ -258,30 +261,36 @@
 
         async function showLeaderboard() {
             leaderboardArea.classList.remove('hidden');
-            const submissionsCol = collection(db, `artifacts/${appId}/public/data/submissions`);
-            const snapshot = await getDocs(submissionsCol);
-            
-            const submissions = [];
-            snapshot.forEach(doc => { submissions.push(doc.data()); });
+            leaderboardList.innerHTML = '<p class="text-center text-slate-500">Đang tải bảng xếp hạng...</p>';
+            try {
+                const submissionsCol = collection(db, `submissions`);
+                const snapshot = await getDocs(submissionsCol);
+                
+                const submissions = [];
+                snapshot.forEach(doc => { submissions.push(doc.data()); });
 
-            submissions.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return a.submittedAt.toMillis() - b.submittedAt.toMillis();
-            });
-
-            const top5 = submissions.slice(0, 5);
-
-            if (top5.length === 0) {
-                leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
-            } else {
-                let tableHTML = `<table class="table-auto"><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm</th></tr></thead><tbody>`;
-                let rank = 1;
-                top5.forEach(data => {
-                    const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
-                    tableHTML += `<tr><td class="text-center rank-${rank}">${rank++} <i class="fas fa-medal"></i></td><td>${data.studentName}</td><td>${roundedScore}</td></tr>`;
+                submissions.sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
                 });
-                tableHTML += `</tbody></table>`;
-                leaderboardList.innerHTML = tableHTML;
+
+                const top5 = submissions.slice(0, 5);
+
+                if (top5.length === 0) {
+                    leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
+                } else {
+                    let tableHTML = `<table class="table-auto"><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm</th></tr></thead><tbody>`;
+                    let rank = 1;
+                    top5.forEach(data => {
+                        const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
+                        tableHTML += `<tr><td class="text-center rank-${rank}">${rank++} <i class="fas fa-medal"></i></td><td>${data.studentName}</td><td>${roundedScore}</td></tr>`;
+                    });
+                    tableHTML += `</tbody></table>`;
+                    leaderboardList.innerHTML = tableHTML;
+                }
+            } catch (error) {
+                console.error("Error fetching leaderboard:", error);
+                leaderboardList.innerHTML = `<p class="text-center text-red-500">Không thể tải bảng xếp hạng. Vui lòng thử lại.</p>`;
             }
         }
 
@@ -307,38 +316,44 @@
         }
 
         async function showAllSubmissions() {
-            showSubmissionsBtn.textContent = 'Đang tải...';
+            showSubmissionsBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tải...';
             showSubmissionsBtn.classList.add('disabled');
             submissionsDashboard.classList.remove('hidden');
 
-            const submissionsCol = collection(db, `artifacts/${appId}/public/data/submissions`);
-            const snapshot = await getDocs(submissionsCol);
+            try {
+                const submissionsCol = collection(db, `submissions`);
+                const snapshot = await getDocs(submissionsCol);
 
-            const submissions = [];
-            snapshot.forEach(doc => { submissions.push(doc.data()); });
+                const submissions = [];
+                snapshot.forEach(doc => { submissions.push(doc.data()); });
 
-            submissions.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return a.submittedAt.toMillis() - b.submittedAt.toMillis();
-            });
-
-            if (submissions.length === 0) {
-                noSubmissionsMsg.classList.remove('hidden');
-                submissionsList.innerHTML = '';
-            } else {
-                noSubmissionsMsg.classList.add('hidden');
-                let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
-                let rank = 1;
-                submissions.forEach(data => {
-                    const date = data.submittedAt.toDate().toLocaleString('vi-VN');
-                    const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
-                    tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
+                submissions.sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
                 });
-                tableHTML += `</tbody></table>`;
-                submissionsList.innerHTML = tableHTML;
+
+                if (submissions.length === 0) {
+                    noSubmissionsMsg.classList.remove('hidden');
+                    submissionsList.innerHTML = '';
+                } else {
+                    noSubmissionsMsg.classList.add('hidden');
+                    let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
+                    let rank = 1;
+                    submissions.forEach(data => {
+                        const date = data.submittedAt.toDate().toLocaleString('vi-VN');
+                        const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
+                        tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
+                    });
+                    tableHTML += `</tbody></table>`;
+                    submissionsList.innerHTML = tableHTML;
+                }
+            } catch(error) {
+                console.error("Error fetching all submissions:", error);
+                submissionsList.innerHTML = `<p class="text-center text-red-500">Không thể tải danh sách bài nộp. Vui lòng thử lại.</p>`;
+            } finally {
+                showSubmissionsBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp';
+                showSubmissionsBtn.classList.remove('disabled');
             }
-            showSubmissionsBtn.textContent = 'Xem toàn bộ bài nộp';
-            showSubmissionsBtn.classList.remove('disabled');
         }
 
         // --- RENDER INITIAL QUIZ & ADD EVENT LISTENERS ---
