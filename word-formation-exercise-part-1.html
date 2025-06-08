@@ -50,8 +50,9 @@
         <div id="studentLogin" class="hidden">
             <div class="bg-blue-50 p-6 rounded-lg text-center">
                 <h2 class="text-xl font-semibold mb-2">Bắt đầu làm bài</h2>
-                <p class="mb-4 text-slate-600">Vui lòng nhập tên của bạn để hệ thống ghi nhận bài làm.</p>
-                <input type="text" id="studentName" placeholder="Ví dụ: Nguyễn Văn An" class="input-field w-full max-w-sm mx-auto text-center">
+                <p class="mb-4 text-slate-600">Vui lòng nhập đúng họ tên trong danh sách lớp.</p>
+                <input type="text" id="studentName" placeholder="Ví dụ: Công Thịnh" class="input-field w-full max-w-sm mx-auto text-center">
+                <p id="nameError" class="text-red-500 text-sm mt-2 hidden">Tên không có trong danh sách. Vui lòng thử lại.</p>
                 <button id="startQuizBtn" class="btn btn-primary mt-4">Bắt đầu</button>
             </div>
         </div>
@@ -134,6 +135,7 @@
         const quizContainerDiv = document.getElementById('quizContainer');
         const resultsAreaDiv = document.getElementById('resultsArea');
         const studentNameInput = document.getElementById('studentName');
+        const nameError = document.getElementById('nameError');
         const startQuizBtn = document.getElementById('startQuizBtn');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const displayStudentName = document.getElementById('displayStudentName');
@@ -168,6 +170,43 @@
             loadingDiv.innerHTML = "<p>Lỗi kết nối. Vui lòng kiểm tra lại cấu hình Firebase và đảm bảo đã thêm domain vào Authorized Domains.</p>";
         });
 
+        // --- STUDENT LIST & VALIDATION ---
+        const studentList = [
+            "Phạm Đặng Vũ Hà Anh",
+            "Nguyễn Thị Bảo Lâm",
+            "Nguyễn Quỳnh Duyên",
+            "Trịnh Xuân Huy",
+            "Anh Minh",
+            "Nguyên Tiến Trung",
+            "Phạm Nguyễn Khánh Đạt",
+            "Nhật Phong",
+            "Thu Ngân",
+            "Thùy Ninh",
+            "Hoàng Dũng",
+            "Công Thịnh"
+        ];
+
+        function normalizeString(str) {
+            return str
+                .normalize("NFD") // Decompose accented characters
+                .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+                .replace(/đ/g, "d") // Handle 'đ' separately
+                .toLowerCase()
+                .trim();
+        }
+
+        function validateStudentName(inputName) {
+            const normalizedInput = normalizeString(inputName);
+            if (!normalizedInput) return null;
+
+            for (const student of studentList) {
+                if (normalizeString(student) === normalizedInput) {
+                    return student; // Return the correctly cased, accented name
+                }
+            }
+            return null; // Not found
+        }
+
         // --- QUIZ DATA & LOGIC ---
         const questions = [
             { id: 1, sentence: "1. What is your ___________?", verb: "decide", correctNoun: "decision", explanation: "Sau tính từ sở hữu 'your' cần một danh từ. 'Decision' (n): sự quyết định." },
@@ -199,14 +238,19 @@
         }
 
         function startQuiz() {
-            const name = studentNameInput.value.trim();
-            if (!name) { alert("Vui lòng nhập tên của bạn!"); return; }
-            displayStudentName.textContent = name;
-            studentLoginDiv.classList.add('hidden');
-            quizContainerDiv.classList.remove('hidden');
+            const inputName = studentNameInput.value;
+            const validatedName = validateStudentName(inputName);
+
+            if (validatedName) {
+                nameError.classList.add('hidden');
+                displayStudentName.textContent = validatedName; // Use the correct name from the list
+                studentLoginDiv.classList.add('hidden');
+                quizContainerDiv.classList.remove('hidden');
+            } else {
+                nameError.classList.remove('hidden');
+            }
         }
         
-        // NEW: Helper function to fetch data with retries
         async function fetchDataWithRetry(retries = 3) {
             const submissionsCol = collection(db, 'submissions');
             for (let i = 0; i < retries; i++) {
