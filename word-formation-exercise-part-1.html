@@ -110,7 +110,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, Timestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG (DÁN MÃ CỦA BẠN VÀO ĐÂY) ---
         const firebaseConfig = {
@@ -205,6 +205,21 @@
             studentLoginDiv.classList.add('hidden');
             quizContainerDiv.classList.remove('hidden');
         }
+        
+        // NEW: Helper function to fetch data with retries
+        async function fetchDataWithRetry(retries = 3) {
+            const submissionsCol = collection(db, 'submissions');
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const snapshot = await getDocs(submissionsCol);
+                    return snapshot; // Success
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} to fetch data failed:`, error);
+                    if (i === retries - 1) throw error; // All retries failed, re-throw the last error
+                    await new Promise(res => setTimeout(res, 1000 * (i + 1))); // Wait longer for each retry
+                }
+            }
+        }
 
         async function submitAndSaveAnswers() {
             submitBtn.classList.add('disabled');
@@ -263,7 +278,7 @@
             leaderboardArea.classList.remove('hidden');
             leaderboardList.innerHTML = '<p class="text-center text-slate-500">Đang tải bảng xếp hạng...</p>';
             try {
-                const snapshot = await getDocs(collection(db, 'submissions'));
+                const snapshot = await fetchDataWithRetry();
                 
                 const submissions = [];
                 snapshot.forEach(doc => { submissions.push(doc.data()); });
@@ -302,7 +317,7 @@
             submissionsDashboard.classList.remove('hidden');
 
             try {
-                const snapshot = await getDocs(collection(db, 'submissions'));
+                const snapshot = await fetchDataWithRetry();
 
                 const submissions = [];
                 snapshot.forEach(doc => { submissions.push(doc.data()); });
