@@ -84,12 +84,9 @@
         <!-- Teacher Dashboard -->
         <div class="mt-12 pt-8 border-t-2 border-dashed">
             <h2 class="text-2xl font-bold text-center text-slate-700"><i class="fas fa-user-tie mr-2"></i>Khu Vực Dành Cho Giáo Viên</h2>
-            <div class="text-center mt-4 flex justify-center gap-4">
+            <div class="text-center mt-4">
                 <button id="showSubmissionsBtn" class="btn btn-secondary">
                     <i class="fas fa-list-ul mr-2"></i> Xem bài nộp
-                </button>
-                <button id="clearHistoryBtn" class="btn btn-danger">
-                    <i class="fas fa-trash-alt mr-2"></i> Xóa lịch sử
                 </button>
             </div>
             <div id="submissionsDashboard" class="hidden mt-6">
@@ -158,7 +155,6 @@
         const submissionsDashboard = document.getElementById('submissionsDashboard');
         const submissionsList = document.getElementById('submissionsList');
         const showSubmissionsBtn = document.getElementById('showSubmissionsBtn');
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
         const leaderboardArea = document.getElementById('leaderboardArea');
         const leaderboardList = document.getElementById('leaderboardList');
         const teacherModal = document.getElementById('teacherModal');
@@ -345,7 +341,10 @@
                 const snapshot = await fetchDataWithRetry();
 
                 const submissions = [];
-                snapshot.forEach(doc => { submissions.push(doc.data()); });
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    submissions.push({ id: doc.id, ...data });
+                });
 
                 submissions.sort((a, b) => {
                     if (b.score !== a.score) return b.score - a.score;
@@ -355,12 +354,19 @@
                 if (submissions.length === 0) {
                     submissionsList.innerHTML = `<p class="text-center text-slate-500 py-6">Chưa có học sinh nào nộp bài.</p>`;
                 } else {
-                    let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
+                    let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm</th><th>Câu đúng</th><th>Thời gian nộp</th><th>Hành động</th></tr></thead><tbody>`;
                     let rank = 1;
                     submissions.forEach(data => {
                         const date = data.submittedAt.toDate().toLocaleString('vi-VN');
                         const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
-                        tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
+                        tableHTML += `<tr>
+                            <td class="text-center">${rank++}</td>
+                            <td>${data.studentName}</td>
+                            <td>${roundedScore}</td>
+                            <td>${data.score}/${data.totalQuestions}</td>
+                            <td>${date}</td>
+                            <td><button onclick="window.confirmDeleteSingle('${data.id}', '${data.studentName}')" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button></td>
+                        </tr>`;
                     });
                     tableHTML += `</tbody></table>`;
                     submissionsList.innerHTML = tableHTML;
@@ -377,8 +383,20 @@
             }
         }
         
-        async function clearAllHistory() {
-            confirmationText.textContent = "Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài không? Hành động này không thể hoàn tác.";
+        async function deleteSingleSubmission(docId) {
+             try {
+                await deleteDoc(doc(db, 'submissions', docId));
+                alert('Đã xóa bài làm thành công.');
+                showAllSubmissions(); // Refresh the list
+                showLeaderboard(); // Refresh the leaderboard
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                alert("Có lỗi xảy ra khi xóa bài làm.");
+            }
+        }
+
+        function confirmDeleteSingle(docId, studentName) {
+            confirmationText.innerHTML = `Bạn có chắc chắn muốn xóa bài làm của học sinh <strong>${studentName}</strong> không? Hành động này không thể hoàn tác.`;
             confirmationModal.classList.remove('hidden');
 
             const confirmationPromise = new Promise((resolve) => {
@@ -392,31 +410,15 @@
                 };
             });
 
-            const confirmed = await confirmationPromise;
-            if (!confirmed) return;
-
-            clearHistoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang xóa...';
-            clearHistoryBtn.classList.add('disabled');
-            
-            try {
-                const snapshot = await getDocs(collection(db, 'submissions'));
-                const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db, 'submissions', docSnap.id)));
-                await Promise.all(deletePromises);
-                alert('Đã xóa toàn bộ lịch sử làm bài.');
-                submissionsList.innerHTML = `<p class="text-center text-slate-500 py-6">Chưa có học sinh nào nộp bài.</p>`;
-                leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
-
-            } catch (error) {
-                console.error("Error clearing history:", error);
-                alert('Có lỗi xảy ra khi xóa lịch sử. Vui lòng thử lại.');
-            } finally {
-                 clearHistoryBtn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i> Xóa lịch sử';
-                 clearHistoryBtn.classList.remove('disabled');
-            }
+            confirmationPromise.then(confirmed => {
+                if (confirmed) {
+                    openTeacherPasswordModal({ type: 'delete', id: docId });
+                }
+            });
         }
 
         function openTeacherPasswordModal(action) {
-            pendingTeacherAction = action; // 'show' or 'clear'
+            pendingTeacherAction = action; 
             passwordError.classList.add('hidden');
             teacherPasswordInput.value = '';
             teacherModal.classList.remove('hidden');
@@ -431,10 +433,10 @@
             const password = teacherPasswordInput.value;
             if (password === "congthinh123") {
                 closeTeacherPasswordModal();
-                if (pendingTeacherAction === 'show') {
+                if (pendingTeacherAction.type === 'show') {
                     showAllSubmissions();
-                } else if (pendingTeacherAction === 'clear') {
-                    clearAllHistory();
+                } else if (pendingTeacherAction.type === 'delete') {
+                    deleteSingleSubmission(pendingTeacherAction.id);
                 }
             } else {
                 passwordError.classList.remove('hidden');
@@ -456,8 +458,7 @@
         
         startQuizBtn.addEventListener('click', startQuiz);
         submitBtn.addEventListener('click', submitAndSaveAnswers);
-        showSubmissionsBtn.addEventListener('click', () => openTeacherPasswordModal('show'));
-        clearHistoryBtn.addEventListener('click', () => openTeacherPasswordModal('clear'));
+        showSubmissionsBtn.addEventListener('click', () => openTeacherPasswordModal({ type: 'show' }));
         cancelModalBtn.addEventListener('click', closeTeacherPasswordModal);
         confirmPasswordBtn.addEventListener('click', checkTeacherPassword);
         teacherPasswordInput.addEventListener('keyup', (event) => {
@@ -466,9 +467,10 @@
             }
         });
         
-        // Make functions globally accessible for retry buttons
+        // Make functions globally accessible for retry and delete buttons
         window.showLeaderboard = showLeaderboard;
         window.showAllSubmissions = showAllSubmissions;
+        window.confirmDeleteSingle = confirmDeleteSingle;
 
     </script>
 </body>
