@@ -17,6 +17,8 @@
         .btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); }
         .btn-secondary { background-color: #64748b; color: white; }
         .btn-secondary:hover { background-color: #475569; }
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover { background-color: #b91c1c; }
         .disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         .hidden { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
@@ -50,9 +52,8 @@
         <div id="studentLogin" class="hidden">
             <div class="bg-blue-50 p-6 rounded-lg text-center">
                 <h2 class="text-xl font-semibold mb-2">Bắt đầu làm bài</h2>
-                <p class="mb-4 text-slate-600">Vui lòng nhập đúng họ tên trong danh sách lớp.</p>
+                <p class="mb-4 text-slate-600">Vui lòng nhập họ tên thật của bạn (không dùng biệt danh).</p>
                 <input type="text" id="studentName" placeholder="Ví dụ: Công Thịnh" class="input-field w-full max-w-sm mx-auto text-center">
-                <p id="nameError" class="text-red-500 text-sm mt-2 hidden">Tên không có trong danh sách. Vui lòng thử lại.</p>
                 <button id="startQuizBtn" class="btn btn-primary mt-4">Bắt đầu</button>
             </div>
         </div>
@@ -83,9 +84,12 @@
         <!-- Teacher Dashboard -->
         <div class="mt-12 pt-8 border-t-2 border-dashed">
             <h2 class="text-2xl font-bold text-center text-slate-700"><i class="fas fa-user-tie mr-2"></i>Khu Vực Dành Cho Giáo Viên</h2>
-            <div class="text-center mt-4">
+            <div class="text-center mt-4 flex justify-center gap-4">
                 <button id="showSubmissionsBtn" class="btn btn-secondary">
-                    <i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp
+                    <i class="fas fa-list-ul mr-2"></i> Xem bài nộp
+                </button>
+                <button id="clearHistoryBtn" class="btn btn-danger">
+                    <i class="fas fa-trash-alt mr-2"></i> Xóa lịch sử
                 </button>
             </div>
             <div id="submissionsDashboard" class="hidden mt-6">
@@ -98,7 +102,7 @@
     <div id="teacherModal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3 class="text-lg font-bold mb-4">Xác thực Giáo viên</h3>
-            <p class="text-sm text-slate-600 mb-2">Vui lòng nhập mật khẩu để xem toàn bộ bài nộp.</p>
+            <p class="text-sm text-slate-600 mb-2">Vui lòng nhập mật khẩu để tiếp tục.</p>
             <input type="password" id="teacherPasswordInput" class="input-field w-full mb-2">
             <p id="passwordError" class="text-red-500 text-sm hidden mb-4">Mật khẩu không đúng. Vui lòng thử lại.</p>
             <div class="flex justify-end gap-3 mt-4">
@@ -107,11 +111,23 @@
             </div>
         </div>
     </div>
+    
+    <!-- Confirmation Modal -->
+     <div id="confirmationModal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 class="text-lg font-bold mb-4 text-red-600">Bạn có chắc chắn?</h3>
+            <p id="confirmationText" class="text-slate-600 mb-6"></p>
+            <div class="flex justify-end gap-3">
+                <button id="cancelConfirmBtn" class="btn bg-gray-200 text-gray-700">Không</button>
+                <button id="finalConfirmBtn" class="btn btn-danger">Có, tôi chắc chắn</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, Timestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG (DÁN MÃ CỦA BẠN VÀO ĐÂY) ---
         const firebaseConfig = {
@@ -135,7 +151,6 @@
         const quizContainerDiv = document.getElementById('quizContainer');
         const resultsAreaDiv = document.getElementById('resultsArea');
         const studentNameInput = document.getElementById('studentName');
-        const nameError = document.getElementById('nameError');
         const startQuizBtn = document.getElementById('startQuizBtn');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const displayStudentName = document.getElementById('displayStudentName');
@@ -143,6 +158,7 @@
         const submissionsDashboard = document.getElementById('submissionsDashboard');
         const submissionsList = document.getElementById('submissionsList');
         const showSubmissionsBtn = document.getElementById('showSubmissionsBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
         const leaderboardArea = document.getElementById('leaderboardArea');
         const leaderboardList = document.getElementById('leaderboardList');
         const teacherModal = document.getElementById('teacherModal');
@@ -150,8 +166,13 @@
         const confirmPasswordBtn = document.getElementById('confirmPasswordBtn');
         const cancelModalBtn = document.getElementById('cancelModalBtn');
         const passwordError = document.getElementById('passwordError');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationText = document.getElementById('confirmationText');
+        const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+        const finalConfirmBtn = document.getElementById('finalConfirmBtn');
         
         let currentUserId = null;
+        let pendingTeacherAction = null;
         
         // --- AUTHENTICATION ---
         onAuthStateChanged(auth, user => {
@@ -169,43 +190,6 @@
             console.error("Anonymous sign-in failed:", error);
             loadingDiv.innerHTML = "<p>Lỗi kết nối. Vui lòng kiểm tra lại cấu hình Firebase và đảm bảo đã thêm domain vào Authorized Domains.</p>";
         });
-
-        // --- STUDENT LIST & VALIDATION ---
-        const studentList = [
-            "Phạm Đặng Vũ Hà Anh",
-            "Nguyễn Thị Bảo Lâm",
-            "Nguyễn Quỳnh Duyên",
-            "Trịnh Xuân Huy",
-            "Anh Minh",
-            "Nguyên Tiến Trung",
-            "Phạm Nguyễn Khánh Đạt",
-            "Nhật Phong",
-            "Thu Ngân",
-            "Thùy Ninh",
-            "Hoàng Dũng",
-            "Công Thịnh"
-        ];
-
-        function normalizeString(str) {
-            return str
-                .normalize("NFD") // Decompose accented characters
-                .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
-                .replace(/đ/g, "d") // Handle 'đ' separately
-                .toLowerCase()
-                .trim();
-        }
-
-        function validateStudentName(inputName) {
-            const normalizedInput = normalizeString(inputName);
-            if (!normalizedInput) return null;
-
-            for (const student of studentList) {
-                if (normalizeString(student) === normalizedInput) {
-                    return student; // Return the correctly cased, accented name
-                }
-            }
-            return null; // Not found
-        }
 
         // --- QUIZ DATA & LOGIC ---
         const questions = [
@@ -238,17 +222,14 @@
         }
 
         function startQuiz() {
-            const inputName = studentNameInput.value;
-            const validatedName = validateStudentName(inputName);
-
-            if (validatedName) {
-                nameError.classList.add('hidden');
-                displayStudentName.textContent = validatedName; // Use the correct name from the list
-                studentLoginDiv.classList.add('hidden');
-                quizContainerDiv.classList.remove('hidden');
-            } else {
-                nameError.classList.remove('hidden');
+            const name = studentNameInput.value.trim();
+            if (!name) {
+                alert("Vui lòng nhập họ tên của bạn!");
+                return;
             }
+            displayStudentName.textContent = name;
+            studentLoginDiv.classList.add('hidden');
+            quizContainerDiv.classList.remove('hidden');
         }
         
         async function fetchDataWithRetry(retries = 3) {
@@ -259,8 +240,8 @@
                     return snapshot; // Success
                 } catch (error) {
                     console.error(`Attempt ${i + 1} to fetch data failed:`, error);
-                    if (i === retries - 1) throw error; // All retries failed, re-throw the last error
-                    await new Promise(res => setTimeout(res, 1000 * (i + 1))); // Wait longer for each retry
+                    if (i === retries - 1) throw error; 
+                    await new Promise(res => setTimeout(res, 1000 * (i + 1))); 
                 }
             }
         }
@@ -391,12 +372,51 @@
                     <button onclick="window.showAllSubmissions()" class="btn btn-sm btn-primary mt-2">Thử lại</button>
                 </div>`;
             } finally {
-                showSubmissionsBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp';
+                showSubmissionsBtn.innerHTML = '<i class="fas fa-list-ul mr-2"></i> Xem bài nộp';
                 showSubmissionsBtn.classList.remove('disabled');
             }
         }
+        
+        async function clearAllHistory() {
+            confirmationText.textContent = "Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài không? Hành động này không thể hoàn tác.";
+            confirmationModal.classList.remove('hidden');
 
-        function openTeacherPasswordModal() {
+            const confirmationPromise = new Promise((resolve) => {
+                finalConfirmBtn.onclick = () => {
+                    confirmationModal.classList.add('hidden');
+                    resolve(true);
+                };
+                cancelConfirmBtn.onclick = () => {
+                    confirmationModal.classList.add('hidden');
+                    resolve(false);
+                };
+            });
+
+            const confirmed = await confirmationPromise;
+            if (!confirmed) return;
+
+            clearHistoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang xóa...';
+            clearHistoryBtn.classList.add('disabled');
+            
+            try {
+                const snapshot = await getDocs(collection(db, 'submissions'));
+                const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db, 'submissions', docSnap.id)));
+                await Promise.all(deletePromises);
+                alert('Đã xóa toàn bộ lịch sử làm bài.');
+                submissionsList.innerHTML = `<p class="text-center text-slate-500 py-6">Chưa có học sinh nào nộp bài.</p>`;
+                leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
+
+            } catch (error) {
+                console.error("Error clearing history:", error);
+                alert('Có lỗi xảy ra khi xóa lịch sử. Vui lòng thử lại.');
+            } finally {
+                 clearHistoryBtn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i> Xóa lịch sử';
+                 clearHistoryBtn.classList.remove('disabled');
+            }
+        }
+
+        function openTeacherPasswordModal(action) {
+            pendingTeacherAction = action; // 'show' or 'clear'
             passwordError.classList.add('hidden');
             teacherPasswordInput.value = '';
             teacherModal.classList.remove('hidden');
@@ -411,7 +431,11 @@
             const password = teacherPasswordInput.value;
             if (password === "congthinh123") {
                 closeTeacherPasswordModal();
-                showAllSubmissions();
+                if (pendingTeacherAction === 'show') {
+                    showAllSubmissions();
+                } else if (pendingTeacherAction === 'clear') {
+                    clearAllHistory();
+                }
             } else {
                 passwordError.classList.remove('hidden');
             }
@@ -432,7 +456,8 @@
         
         startQuizBtn.addEventListener('click', startQuiz);
         submitBtn.addEventListener('click', submitAndSaveAnswers);
-        showSubmissionsBtn.addEventListener('click', openTeacherPasswordModal);
+        showSubmissionsBtn.addEventListener('click', () => openTeacherPasswordModal('show'));
+        clearHistoryBtn.addEventListener('click', () => openTeacherPasswordModal('clear'));
         cancelModalBtn.addEventListener('click', closeTeacherPasswordModal);
         confirmPasswordBtn.addEventListener('click', checkTeacherPassword);
         teacherPasswordInput.addEventListener('keyup', (event) => {
