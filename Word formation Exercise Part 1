@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Word Formation Worksheet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #eef2f7; }
+        .container { max-width: 900px; }
+        .input-field { border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; border-radius: 6px; transition: border-color 0.3s, box-shadow 0.3s; }
+        .input-field:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
+        .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; border: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary { background-color: #2563eb; color: white; }
+        .btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); }
+        .btn-secondary { background-color: #64748b; color: white; }
+        .btn-secondary:hover { background-color: #475569; }
+        .disabled { opacity: 0.5; cursor: not-allowed; }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; font-weight: 600; }
+        tr:hover { background-color: #f1f5f9; }
+        .rank-1 { color: #f59e0b; font-weight: bold; } /* Gold */
+        .rank-2 { color: #71717a; font-weight: bold; } /* Silver */
+        .rank-3 { color: #a16207; font-weight: bold; } /* Bronze */
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-box { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div class="container mx-auto p-4 md:p-8 bg-white rounded-2xl shadow-lg my-8">
+
+        <!-- Header -->
+        <header class="text-center mb-8 pb-6 border-b-2 border-blue-100">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-700"><i class="fas fa-cloud-upload-alt mr-2"></i> Bài Tập Online: Word Formation</h1>
+            <p class="text-slate-500 mt-2">Nộp bài và xem kết quả của cả lớp!</p>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-10">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
+            <p class="mt-2">Đang kết nối tới máy chủ...</p>
+        </div>
+
+        <!-- Student Login -->
+        <div id="studentLogin" class="hidden">
+            <div class="bg-blue-50 p-6 rounded-lg text-center">
+                <h2 class="text-xl font-semibold mb-2">Bắt đầu làm bài</h2>
+                <p class="mb-4 text-slate-600">Vui lòng nhập tên của bạn để hệ thống ghi nhận bài làm.</p>
+                <input type="text" id="studentName" placeholder="Ví dụ: Nguyễn Văn An" class="input-field w-full max-w-sm mx-auto text-center">
+                <button id="startQuizBtn" class="btn btn-primary mt-4">Bắt đầu</button>
+            </div>
+        </div>
+
+        <!-- The Quiz -->
+        <div id="quizContainer" class="hidden">
+             <div class="flex justify-between items-center mb-6">
+                <p>Học sinh: <strong id="displayStudentName" class="text-blue-600"></strong></p>
+                <p class="text-xs text-slate-400">UserID: <span id="userIdDisplay"></span></p>
+            </div>
+            <form id="worksheetForm">
+                <div id="questionsContainer"></div>
+                <button type="button" id="submitBtn" class="btn btn-primary mt-10 mx-auto">
+                    <i class="fas fa-check-circle"></i> Nộp bài & Xem kết quả
+                </button>
+            </form>
+        </div>
+
+        <!-- Results Display -->
+        <div id="resultsArea" class="hidden mt-8"></div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboardArea" class="hidden mt-10">
+            <h2 class="text-2xl font-bold text-center text-amber-600"><i class="fas fa-trophy mr-2"></i>Bảng Xếp Hạng Top 5</h2>
+            <div id="leaderboardList" class="mt-4"></div>
+        </div>
+        
+        <!-- Teacher Dashboard -->
+        <div class="mt-12 pt-8 border-t-2 border-dashed">
+            <h2 class="text-2xl font-bold text-center text-slate-700"><i class="fas fa-user-tie mr-2"></i>Khu Vực Dành Cho Giáo Viên</h2>
+            <div class="text-center mt-4">
+                <button id="showSubmissionsBtn" class="btn btn-secondary">
+                    <i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp
+                </button>
+            </div>
+            <div id="submissionsDashboard" class="hidden mt-6">
+                 <div id="submissionsList"></div>
+                 <p id="noSubmissions" class="text-center text-slate-500 py-6 hidden">Chưa có học sinh nào nộp bài.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Password Modal -->
+    <div id="teacherModal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 class="text-lg font-bold mb-4">Xác thực Giáo viên</h3>
+            <p class="text-sm text-slate-600 mb-2">Vui lòng nhập mật khẩu để xem toàn bộ bài nộp.</p>
+            <input type="password" id="teacherPasswordInput" class="input-field w-full mb-2">
+            <p id="passwordError" class="text-red-500 text-sm hidden mb-4">Mật khẩu không đúng. Vui lòng thử lại.</p>
+            <div class="flex justify-end gap-3 mt-4">
+                <button id="cancelModalBtn" class="btn bg-gray-200 text-gray-700">Hủy</button>
+                <button id="confirmPasswordBtn" class="btn btn-primary">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG (DO NOT EDIT) ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-word-formation-app-v2';
+
+        // --- INITIALIZE FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- DOM ELEMENTS ---
+        const loadingDiv = document.getElementById('loading');
+        const studentLoginDiv = document.getElementById('studentLogin');
+        const quizContainerDiv = document.getElementById('quizContainer');
+        const resultsAreaDiv = document.getElementById('resultsArea');
+        const studentNameInput = document.getElementById('studentName');
+        const startQuizBtn = document.getElementById('startQuizBtn');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const displayStudentName = document.getElementById('displayStudentName');
+        const submitBtn = document.getElementById('submitBtn');
+        const submissionsDashboard = document.getElementById('submissionsDashboard');
+        const submissionsList = document.getElementById('submissionsList');
+        const noSubmissionsMsg = document.getElementById('noSubmissions');
+        const showSubmissionsBtn = document.getElementById('showSubmissionsBtn');
+        const leaderboardArea = document.getElementById('leaderboardArea');
+        const leaderboardList = document.getElementById('leaderboardList');
+        const teacherModal = document.getElementById('teacherModal');
+        const teacherPasswordInput = document.getElementById('teacherPasswordInput');
+        const confirmPasswordBtn = document.getElementById('confirmPasswordBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const passwordError = document.getElementById('passwordError');
+        
+        let currentUserId = null;
+        
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                currentUserId = user.uid;
+                userIdDisplay.textContent = currentUserId;
+                loadingDiv.classList.add('hidden');
+                studentLoginDiv.classList.remove('hidden');
+            }
+        });
+
+        signInAnonymously(auth).catch(error => {
+            console.error("Anonymous sign-in failed:", error);
+            loadingDiv.innerHTML = "<p>Lỗi kết nối. Vui lòng tải lại trang.</p>";
+        });
+
+        // --- QUIZ DATA & LOGIC ---
+        const questions = [
+            { id: 1, sentence: "1. What is your ___________?", verb: "decide", correctNoun: "decision", explanation: "Sau tính từ sở hữu 'your' cần một danh từ. 'Decision' (n): sự quyết định." },
+            { id: 2, sentence: "2. Their ___________ will be on Saturday.", verb: "marry", correctNoun: "marriage", explanation: "Sau tính từ sở hữu 'Their' cần một danh từ làm chủ ngữ. 'Marriage' (n): hôn lễ." },
+            { id: 3, sentence: "3. The ___________ of this bridge will be finished soon.", verb: "construct", correctNoun: "construction", explanation: "Sau mạo từ 'The' cần danh từ làm chủ ngữ. 'Construction' (n): sự xây dựng." },
+            { id: 4, sentence: "4. Your ___________ is awful, my dear!", verb: "behave", correctNoun: "behaviour", explanation: "Sau tính từ sở hữu 'Your' cần danh từ. 'Behaviour' (n): hành vi." },
+            { id: 5, sentence: "5. We plan our ___________ on Friday morning.", verb: "depart", correctNoun: "departure", explanation: "Sau tính từ sở hữu 'our' cần danh từ. 'Departure' (n): sự khởi hành." },
+            { id: 6, sentence: "6. The ___________ of this problem was very interesting.", verb: "discuss", correctNoun: "discussion", explanation: "Sau mạo từ 'The' cần danh từ. 'Discussion' (n): sự thảo luận." },
+            { id: 7, sentence: "7. I need your ___________ in this document.", verb: "sign", correctNoun: "signature", explanation: "Sau tính từ sở hữu 'your' cần danh từ. 'Signature' (n): chữ ký." },
+            { id: 8, sentence: "8. Do you know these ___________?", verb: "require", correctNoun: "requirements", explanation: "Sau 'these' cần danh từ số nhiều. 'Requirements' (n): các yêu cầu." },
+            { id: 9, sentence: "9. He spoke about the ___________ of the company.", verb: "manage", correctNoun: "management", explanation: "Sau mạo từ 'the' cần danh từ. 'Management' (n): sự quản lý." },
+            { id: 10, sentence: "10. I take no ___________ to visit us on Sunday.", verb: "refuse", correctNoun: "refusal", explanation: "Cụm 'take no refusal' nghĩa là không chấp nhận sự từ chối. 'Refusal' (n): sự từ chối." },
+            { id: 11, sentence: "11. You are an excellent ___________.", verb: "swim", correctNoun: "swimmer", explanation: "Sau tính từ 'excellent' cần một danh từ chỉ người. 'Swimmer' (n): người bơi lội." },
+            { id: 12, sentence: "12. Do you know the results of your ___________ exams?", verb: "enter", correctNoun: "entrance", explanation: "Sau tính từ sở hữu 'your' cần danh từ để tạo danh từ ghép. 'Entrance exams': kỳ thi đầu vào." },
+            { id: 13, sentence: "13. The ___________ of new mobiles is planned on Monday.", verb: "deliver", correctNoun: "delivery", explanation: "Sau mạo từ 'The' cần một danh từ. 'Delivery' (n): sự giao hàng." },
+            { id: 14, sentence: "14. Your grammar ___________ is very poor.", verb: "know", correctNoun: "knowledge", explanation: "Sau danh từ 'grammar' (đóng vai trò như tính từ) cần danh từ. 'Knowledge' (n): kiến thức." },
+            { id: 15, sentence: "15. What is the ___________ of this theorem?", verb: "prove", correctNoun: "proof", explanation: "Sau mạo từ 'the' cần danh từ. 'Proof' (n): bằng chứng, sự chứng minh." },
+            { id: 16, sentence: "16. My ___________ was not correct.", verb: "explain", correctNoun: "explanation", explanation: "Sau tính từ sở hữu 'My' cần danh từ. 'Explanation' (n): sự giải thích." },
+            { id: 17, sentence: "17. We discussed the ___________ of the party at school.", verb: "arrange", correctNoun: "arrangement", explanation: "Sau mạo từ 'the' cần danh từ. 'Arrangement' (n): sự sắp xếp." },
+            { id: 18, sentence: "18. Your ___________ of these films isn't convincing.", verb: "compare", correctNoun: "comparison", explanation: "Sau tính từ sở hữu 'Your' cần danh từ. 'Comparison' (n): sự so sánh." },
+            { id: 19, sentence: "19. I need your ___________ in this discussion.", verb: "assist", correctNoun: "assistance", explanation: "Sau tính từ sở hữu 'your' cần danh từ. 'Assistance' (n): sự giúp đỡ." },
+            { id: 20, sentence: "20. They took part in the ___________ yesterday.", verb: "demonstrate", correctNoun: "demonstration", explanation: "Sau mạo từ 'the' cần danh từ. 'Demonstration' (n): cuộc biểu tình." },
+        ];
+        
+        function calculateRoundedScore(score, total) {
+            if (total === 0) return 0;
+            const rawScore = (score / total) * 10;
+            return (Math.round(rawScore * 5) / 5).toFixed(1);
+        }
+
+        function startQuiz() {
+            const name = studentNameInput.value.trim();
+            if (!name) { alert("Vui lòng nhập tên của bạn!"); return; }
+            displayStudentName.textContent = name;
+            studentLoginDiv.classList.add('hidden');
+            quizContainerDiv.classList.remove('hidden');
+        }
+
+        async function submitAndSaveAnswers() {
+            submitBtn.classList.add('disabled');
+            submitBtn.textContent = 'Đang nộp bài...';
+
+            let score = 0;
+            const userAnswers = [];
+            questions.forEach(q => {
+                const userAnswer = document.getElementById(`q${q.id}`).value.trim();
+                const isCorrect = userAnswer.toLowerCase() === q.correctNoun.toLowerCase() || (q.correctNoun === "behaviour" && userAnswer.toLowerCase() === "behavior");
+                if (isCorrect) score++;
+                userAnswers.push({ questionId: q.id, userAnswer, isCorrect });
+            });
+            
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/submissions`), {
+                    studentName: displayStudentName.textContent,
+                    userId: currentUserId,
+                    score: score,
+                    totalQuestions: questions.length,
+                    answers: userAnswers,
+                    submittedAt: Timestamp.now()
+                });
+            } catch (error) {
+                console.error("Error writing document: ", error);
+                // Handle error with a custom message if possible
+                return;
+            }
+            displayResults(score, userAnswers);
+            showLeaderboard();
+        }
+
+        function displayResults(score, userAnswers) {
+            quizContainerDiv.classList.add('hidden');
+            const roundedScore = calculateRoundedScore(score, questions.length);
+            let feedbackHTML = '';
+            if (parseFloat(roundedScore) >= 8.0) {
+                feedbackHTML = `<div class="p-4 bg-green-100 text-green-800 rounded-lg border-l-4 border-green-500"><i class="fas fa-star mr-2"></i>Tuyệt vời! Bạn làm rất tốt!</div>`;
+            } else if (parseFloat(roundedScore) >= 5.0) {
+                feedbackHTML = `<div class="p-4 bg-yellow-100 text-yellow-800 rounded-lg border-l-4 border-yellow-500"><i class="fas fa-thumbs-up mr-2"></i>Khá tốt! Cố gắng thêm nhé!</div>`;
+            } else {
+                feedbackHTML = `<div class="p-4 bg-red-100 text-red-800 rounded-lg border-l-4 border-red-500"><i class="fas fa-user-graduate mr-2"></i>Bạn cần cố gắng hơn. Hãy làm lại bài này! Nếu không thầy Thịnh sẽ không cho vào lớp đâu đấy!</div>`;
+            }
+
+            resultsAreaDiv.innerHTML = `
+                <div class="text-center p-6 bg-blue-50 rounded-lg">
+                    <h2 class="text-2xl font-bold">Kết quả của bạn</h2>
+                    <p class="text-3xl font-bold my-3 text-blue-600">${score}/${questions.length} (${roundedScore} điểm)</p>
+                    ${feedbackHTML}
+                </div>`;
+            resultsAreaDiv.classList.remove('hidden');
+        }
+
+        async function showLeaderboard() {
+            leaderboardArea.classList.remove('hidden');
+            const submissionsCol = collection(db, `artifacts/${appId}/public/data/submissions`);
+            const snapshot = await getDocs(submissionsCol);
+            
+            const submissions = [];
+            snapshot.forEach(doc => { submissions.push(doc.data()); });
+
+            submissions.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.submittedAt.toMillis() - b.submittedAt.toMillis();
+            });
+
+            const top5 = submissions.slice(0, 5);
+
+            if (top5.length === 0) {
+                leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
+            } else {
+                let tableHTML = `<table class="table-auto"><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm</th></tr></thead><tbody>`;
+                let rank = 1;
+                top5.forEach(data => {
+                    const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
+                    tableHTML += `<tr><td class="text-center rank-${rank}">${rank++} <i class="fas fa-medal"></i></td><td>${data.studentName}</td><td>${roundedScore}</td></tr>`;
+                });
+                tableHTML += `</tbody></table>`;
+                leaderboardList.innerHTML = tableHTML;
+            }
+        }
+
+        function openTeacherPasswordModal() {
+            passwordError.classList.add('hidden');
+            teacherPasswordInput.value = '';
+            teacherModal.classList.remove('hidden');
+            teacherPasswordInput.focus();
+        }
+
+        function closeTeacherPasswordModal() {
+            teacherModal.classList.add('hidden');
+        }
+
+        function checkTeacherPassword() {
+            const password = teacherPasswordInput.value;
+            if (password === "congthinh123") {
+                closeTeacherPasswordModal();
+                showAllSubmissions();
+            } else {
+                passwordError.classList.remove('hidden');
+            }
+        }
+
+        async function showAllSubmissions() {
+            showSubmissionsBtn.textContent = 'Đang tải...';
+            showSubmissionsBtn.classList.add('disabled');
+            submissionsDashboard.classList.remove('hidden');
+
+            const submissionsCol = collection(db, `artifacts/${appId}/public/data/submissions`);
+            const snapshot = await getDocs(submissionsCol);
+
+            const submissions = [];
+            snapshot.forEach(doc => { submissions.push(doc.data()); });
+
+            submissions.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.submittedAt.toMillis() - b.submittedAt.toMillis();
+            });
+
+            if (submissions.length === 0) {
+                noSubmissionsMsg.classList.remove('hidden');
+                submissionsList.innerHTML = '';
+            } else {
+                noSubmissionsMsg.classList.add('hidden');
+                let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
+                let rank = 1;
+                submissions.forEach(data => {
+                    const date = data.submittedAt.toDate().toLocaleString('vi-VN');
+                    const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
+                    tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
+                });
+                tableHTML += `</tbody></table>`;
+                submissionsList.innerHTML = tableHTML;
+            }
+            showSubmissionsBtn.textContent = 'Xem toàn bộ bài nộp';
+            showSubmissionsBtn.classList.remove('disabled');
+        }
+
+        // --- RENDER INITIAL QUIZ & ADD EVENT LISTENERS ---
+        const questionsContainer = document.getElementById('questionsContainer');
+        questions.forEach(q => {
+            questionsContainer.innerHTML += `
+                <div class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <label for="q${q.id}" class="block font-medium text-slate-700 mb-2">
+                        <i class="fas fa-pencil-alt text-blue-500 mr-2"></i>${q.sentence} 
+                        <span class="text-sm text-slate-500 italic">(${q.verb})</span>
+                    </label>
+                    <input type="text" id="q${q.id}" class="input-field w-full max-w-xs">
+                </div>`;
+        });
+        
+        startQuizBtn.addEventListener('click', startQuiz);
+        submitBtn.addEventListener('click', submitAndSaveAnswers);
+        showSubmissionsBtn.addEventListener('click', openTeacherPasswordModal);
+        cancelModalBtn.addEventListener('click', closeTeacherPasswordModal);
+        confirmPasswordBtn.addEventListener('click', checkTeacherPassword);
+        teacherPasswordInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                checkTeacherPassword();
+            }
+        });
+
+    </script>
+</body>
+</html>
