@@ -12,6 +12,7 @@
         .input-field { border: 1px solid #cbd5e1; padding: 0.6rem 0.85rem; border-radius: 6px; transition: border-color 0.3s, box-shadow 0.3s; }
         .input-field:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
         .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; border: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.875rem; }
         .btn-primary { background-color: #2563eb; color: white; }
         .btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); }
         .btn-secondary { background-color: #64748b; color: white; }
@@ -88,7 +89,6 @@
             </div>
             <div id="submissionsDashboard" class="hidden mt-6">
                  <div id="submissionsList"></div>
-                 <p id="noSubmissions" class="text-center text-slate-500 py-6 hidden">Chưa có học sinh nào nộp bài.</p>
             </div>
         </div>
     </div>
@@ -140,7 +140,6 @@
         const submitBtn = document.getElementById('submitBtn');
         const submissionsDashboard = document.getElementById('submissionsDashboard');
         const submissionsList = document.getElementById('submissionsList');
-        const noSubmissionsMsg = document.getElementById('noSubmissions');
         const showSubmissionsBtn = document.getElementById('showSubmissionsBtn');
         const leaderboardArea = document.getElementById('leaderboardArea');
         const leaderboardList = document.getElementById('leaderboardList');
@@ -159,6 +158,8 @@
                 userIdDisplay.textContent = currentUserId;
                 loadingDiv.classList.add('hidden');
                 studentLoginDiv.classList.remove('hidden');
+            } else {
+                 loadingDiv.innerHTML = "<p>Lỗi xác thực người dùng. Vui lòng tải lại trang.</p>";
             }
         });
 
@@ -262,12 +263,17 @@
             leaderboardArea.classList.remove('hidden');
             leaderboardList.innerHTML = '<p class="text-center text-slate-500">Đang tải bảng xếp hạng...</p>';
             try {
-                const submissionsCol = collection(db, 'submissions');
-                const q = query(submissionsCol, orderBy("score", "desc"), orderBy("submittedAt", "asc"), limit(5));
-                const snapshot = await getDocs(q);
+                const snapshot = await getDocs(collection(db, 'submissions'));
                 
-                const top5 = [];
-                snapshot.forEach(doc => { top5.push(doc.data()); });
+                const submissions = [];
+                snapshot.forEach(doc => { submissions.push(doc.data()); });
+
+                submissions.sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
+                });
+
+                const top5 = submissions.slice(0, 5);
 
                 if (top5.length === 0) {
                     leaderboardList.innerHTML = `<p class="text-center text-slate-500">Chưa có ai nộp bài để xếp hạng.</p>`;
@@ -283,7 +289,51 @@
                 }
             } catch (error) {
                 console.error("Error fetching leaderboard:", error);
-                leaderboardList.innerHTML = `<p class="text-center text-red-500">Không thể tải bảng xếp hạng. Vui lòng thử lại.</p>`;
+                leaderboardList.innerHTML = `<div class="text-center text-red-500">
+                    <p>Không thể tải bảng xếp hạng.</p>
+                    <button onclick="window.showLeaderboard()" class="btn btn-sm btn-primary mt-2">Thử lại</button>
+                </div>`;
+            }
+        }
+
+        async function showAllSubmissions() {
+            showSubmissionsBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tải...';
+            showSubmissionsBtn.classList.add('disabled');
+            submissionsDashboard.classList.remove('hidden');
+
+            try {
+                const snapshot = await getDocs(collection(db, 'submissions'));
+
+                const submissions = [];
+                snapshot.forEach(doc => { submissions.push(doc.data()); });
+
+                submissions.sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.submittedAt.toMillis() - b.submittedAt.toMillis();
+                });
+
+                if (submissions.length === 0) {
+                    submissionsList.innerHTML = `<p class="text-center text-slate-500 py-6">Chưa có học sinh nào nộp bài.</p>`;
+                } else {
+                    let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
+                    let rank = 1;
+                    submissions.forEach(data => {
+                        const date = data.submittedAt.toDate().toLocaleString('vi-VN');
+                        const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
+                        tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
+                    });
+                    tableHTML += `</tbody></table>`;
+                    submissionsList.innerHTML = tableHTML;
+                }
+            } catch(error) {
+                console.error("Error fetching all submissions:", error);
+                submissionsList.innerHTML = `<div class="text-center text-red-500 py-6">
+                    <p>Không thể tải danh sách bài nộp.</p>
+                    <button onclick="window.showAllSubmissions()" class="btn btn-sm btn-primary mt-2">Thử lại</button>
+                </div>`;
+            } finally {
+                showSubmissionsBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp';
+                showSubmissionsBtn.classList.remove('disabled');
             }
         }
 
@@ -305,43 +355,6 @@
                 showAllSubmissions();
             } else {
                 passwordError.classList.remove('hidden');
-            }
-        }
-
-        async function showAllSubmissions() {
-            showSubmissionsBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tải...';
-            showSubmissionsBtn.classList.add('disabled');
-            submissionsDashboard.classList.remove('hidden');
-
-            try {
-                const submissionsCol = collection(db, 'submissions');
-                const q = query(submissionsCol, orderBy("score", "desc"), orderBy("submittedAt", "asc"));
-                const snapshot = await getDocs(q);
-
-                const submissions = [];
-                snapshot.forEach(doc => { submissions.push(doc.data()); });
-
-                if (submissions.length === 0) {
-                    noSubmissionsMsg.classList.remove('hidden');
-                    submissionsList.innerHTML = '';
-                } else {
-                    noSubmissionsMsg.classList.add('hidden');
-                    let tableHTML = `<table><thead><tr><th>Hạng</th><th>Học sinh</th><th>Điểm (trên 10)</th><th>Câu đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
-                    let rank = 1;
-                    submissions.forEach(data => {
-                        const date = data.submittedAt.toDate().toLocaleString('vi-VN');
-                        const roundedScore = calculateRoundedScore(data.score, data.totalQuestions);
-                        tableHTML += `<tr><td class="text-center">${rank++}</td><td>${data.studentName}</td><td>${roundedScore}</td><td>${data.score}/${data.totalQuestions}</td><td>${date}</td></tr>`;
-                    });
-                    tableHTML += `</tbody></table>`;
-                    submissionsList.innerHTML = tableHTML;
-                }
-            } catch(error) {
-                console.error("Error fetching all submissions:", error);
-                submissionsList.innerHTML = `<p class="text-center text-red-500">Không thể tải danh sách bài nộp. Vui lòng thử lại.</p>`;
-            } finally {
-                showSubmissionsBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Xem toàn bộ bài nộp';
-                showSubmissionsBtn.classList.remove('disabled');
             }
         }
 
@@ -368,6 +381,10 @@
                 checkTeacherPassword();
             }
         });
+        
+        // Make functions globally accessible for retry buttons
+        window.showLeaderboard = showLeaderboard;
+        window.showAllSubmissions = showAllSubmissions;
 
     </script>
 </body>
