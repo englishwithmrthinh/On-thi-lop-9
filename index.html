@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS - Thầy Thịnh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: #d1d5db;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: #374151;
+            color: #ffffff;
+        }
+        .sidebar-link i {
+            width: 1.25rem;
+            margin-right: 0.75rem;
+        }
+        .stat-card {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- ===== Trang Đăng Nhập ===== -->
+    <div id="loginPage" class="hidden flex items-center justify-center min-h-screen">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+            <div class="text-center mb-8">
+                <i class="fas fa-graduation-cap text-5xl text-blue-600"></i>
+                <h1 class="text-3xl font-bold text-gray-800 mt-4">Hệ Thống Quản Lý Học Tập</h1>
+                <p class="text-gray-500">Dành cho Lớp học của Thầy Thịnh</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="email" class="block text-gray-700 font-medium mb-2">Email</label>
+                    <input type="email" id="email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="vidu@email.com" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 font-medium mb-2">Mật khẩu</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="********" required>
+                </div>
+                <p id="loginError" class="text-red-500 text-center mb-4 hidden"></p>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold flex items-center justify-center">
+                    <span id="loginBtnText">Đăng Nhập</span>
+                    <i id="loginSpinner" class="fas fa-spinner fa-spin hidden ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Giao Diện Chính Sau Khi Đăng Nhập ===== -->
+    <div id="mainApp" class="hidden">
+        <div class="flex h-screen bg-gray-200">
+            <!-- Sidebar (Thanh Điều Hướng) -->
+            <aside id="sidebar" class="w-64 bg-gray-800 text-white flex flex-col">
+                <div class="h-20 flex items-center justify-center border-b border-gray-700">
+                    <i class="fas fa-graduation-cap text-3xl text-blue-400"></i>
+                    <span class="ml-3 text-xl font-bold">LMS THẦY THỊNH</span>
+                </div>
+                <nav class="flex-1 p-4">
+                    <a data-page="dashboard" class="sidebar-link active">
+                        <i class="fas fa-tachometer-alt fa-fw"></i>
+                        <span>Tổng quan</span>
+                    </a>
+                    <a data-page="classes" class="sidebar-link">
+                        <i class="fas fa-chalkboard-user fa-fw"></i>
+                        <span>Lớp học</span>
+                    </a>
+                    <a data-page="assignments" class="sidebar-link">
+                        <i class="fas fa-file-alt fa-fw"></i>
+                        <span>Bài tập</span>
+                    </a>
+                     <a data-page="library" class="sidebar-link">
+                        <i class="fas fa-book fa-fw"></i>
+                        <span>Thư viện</span>
+                    </a>
+                    <a data-page="grades" class="sidebar-link">
+                        <i class="fas fa-award fa-fw"></i>
+                        <span>Bảng điểm</span>
+                    </a>
+                </nav>
+                 <div class="p-4 border-t border-gray-700">
+                    <a id="logoutBtn" class="sidebar-link">
+                        <i class="fas fa-sign-out-alt fa-fw"></i>
+                        <span>Đăng xuất</span>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Main Content (Nội Dung Chính) -->
+            <main class="flex-1 flex flex-col">
+                <header class="bg-white shadow-md p-4 flex justify-between items-center">
+                    <h2 id="pageTitle" class="text-2xl font-bold text-gray-800">Tổng quan</h2>
+                    <div class="flex items-center">
+                        <span id="userDisplayName" class="mr-3"></span>
+                        <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=T" class="rounded-full" alt="Avatar">
+                    </div>
+                </header>
+                
+                <div id="mainContent" class="flex-1 p-8 overflow-y-auto">
+                    <!-- Nội dung của các trang sẽ được hiển thị ở đây -->
+                    <!-- Trang Tổng Quan (Dashboard) -->
+                    <div id="dashboardView" class="page-content">
+                        <h3 class="text-3xl font-bold text-gray-800 mb-6">Chào mừng trở lại!</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="stat-card">
+                                <div class="flex items-center">
+                                    <i class="fas fa-user-graduate text-3xl text-blue-500 bg-blue-100 p-3 rounded-full"></i>
+                                    <div class="ml-4">
+                                        <p class="text-gray-500">Tổng số học sinh</p>
+                                        <p class="text-2xl font-bold">125</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="flex items-center">
+                                    <i class="fas fa-chalkboard text-3xl text-green-500 bg-green-100 p-3 rounded-full"></i>
+                                    <div class="ml-4">
+                                        <p class="text-gray-500">Lớp học</p>
+                                        <p class="text-2xl font-bold">4</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                 <div class="flex items-center">
+                                    <i class="fas fa-file-signature text-3xl text-yellow-500 bg-yellow-100 p-3 rounded-full"></i>
+                                    <div class="ml-4">
+                                        <p class="text-gray-500">Bài tập đã giao</p>
+                                        <p class="text-2xl font-bold">28</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                             <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h4 class="text-xl font-semibold mb-4">Bài tập gần đây</h4>
+                                <ul>
+                                    <li class="flex justify-between py-2 border-b"><span>Bài tập Thì Hiện tại Đơn</span> <span class="text-gray-500">Lớp 9A1</span></li>
+                                    <li class="flex justify-between py-2 border-b"><span>Word Formation - Nouns</span> <span class="text-gray-500">Lớp 9A2</span></li>
+                                    <li class="flex justify-between py-2"><span>Bài tập Giới từ</span> <span class="text-gray-500">Lớp 9A1</span></li>
+                                </ul>
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h4 class="text-xl font-semibold mb-4">Thông báo mới</h4>
+                                <p class="text-gray-600">Chưa có thông báo nào.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Các trang khác sẽ được thêm vào đây -->
+                    <div id="classesView" class="page-content hidden">
+                        <h3 class="text-3xl font-bold text-gray-800">Quản lý Lớp học</h3>
+                        <!-- Nội dung quản lý lớp học -->
+                    </div>
+                     <div id="assignmentsView" class="page-content hidden">
+                        <h3 class="text-3xl font-bold text-gray-800">Quản lý Bài tập</h3>
+                        <!-- Nội dung quản lý bài tập -->
+                    </div>
+                    <div id="libraryView" class="page-content hidden">
+                        <h3 class="text-3xl font-bold text-gray-800">Thư viện Tài liệu</h3>
+                        <!-- Nội dung thư viện -->
+                    </div>
+                    <div id="gradesView" class="page-content hidden">
+                        <h3 class="text-3xl font-bold text-gray-800">Bảng điểm</h3>
+                        <!-- Nội dung bảng điểm -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import các hàm cần thiết từ Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // ===== CẤU HÌNH FIREBASE (Rất quan trọng!) =====
+        // Bạn hãy dán mã cấu hình Firebase của mình vào đây.
+        // Mã này có thể lấy từ Bước 4 trong hướng dẫn tôi đã gửi trước đó.
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Khởi tạo Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // ===== Lấy các phần tử HTML =====
+        const loginPage = document.getElementById('loginPage');
+        const mainApp = document.getElementById('mainApp');
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginBtnText = document.getElementById('loginBtnText');
+        const loginSpinner = document.getElementById('loginSpinner');
+        const loginError = document.getElementById('loginError');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userDisplayName = document.getElementById('userDisplayName');
+
+        // ===== XỬ LÝ XÁC THỰC (Authentication) =====
+
+        // 1. Theo dõi trạng thái đăng nhập
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Người dùng đã đăng nhập
+                console.log("Người dùng đã đăng nhập:", user);
+                loginPage.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                userDisplayName.textContent = user.email; // Hiển thị email người dùng
+            } else {
+                // Người dùng đã đăng xuất hoặc chưa đăng nhập
+                console.log("Không có người dùng đăng nhập.");
+                mainApp.classList.add('hidden');
+                loginPage.classList.remove('hidden');
+            }
+        });
+
+        // 2. Xử lý sự kiện đăng nhập
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Ngăn form tự gửi đi
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Vô hiệu hóa nút bấm và hiển thị spinner
+            loginBtn.disabled = true;
+            loginBtnText.textContent = "Đang xử lý...";
+            loginSpinner.classList.remove('hidden');
+            loginError.classList.add('hidden');
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Đăng nhập thành công, onAuthStateChanged sẽ tự động xử lý
+                    const user = userCredential.user;
+                    console.log("Đăng nhập thành công:", user);
+                })
+                .catch((error) => {
+                    // Xử lý lỗi
+                    console.error("Lỗi đăng nhập:", error.code);
+                    let errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại.";
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        errorMessage = "Email hoặc mật khẩu không đúng.";
+                    }
+                    loginError.textContent = errorMessage;
+                    loginError.classList.remove('hidden');
+                })
+                .finally(() => {
+                    // Bật lại nút bấm và ẩn spinner
+                    loginBtn.disabled = false;
+                    loginBtnText.textContent = "Đăng Nhập";
+                    loginSpinner.classList.add('hidden');
+                });
+        });
+
+        // 3. Xử lý sự kiện đăng xuất
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch((error) => {
+                console.error("Lỗi đăng xuất:", error);
+                alert("Đã có lỗi khi đăng xuất.");
+            });
+        });
+
+
+        // ===== XỬ LÝ CHUYỂN TRANG (Navigation) =====
+        const sidebarLinks = document.querySelectorAll('.sidebar-link[data-page]');
+        const pageTitle = document.getElementById('pageTitle');
+        const pageContents = document.querySelectorAll('.page-content');
+        
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.id === 'logoutBtn') return;
+                e.preventDefault();
+
+                // Bỏ active ở link cũ
+                document.querySelector('.sidebar-link.active').classList.remove('active');
+                // Thêm active cho link mới
+                this.classList.add('active');
+                
+                const pageId = this.dataset.page;
+
+                // Cập nhật tiêu đề trang
+                pageTitle.textContent = this.querySelector('span').textContent;
+
+                // Ẩn tất cả các trang
+                pageContents.forEach(page => page.classList.add('hidden'));
+
+                // Hiển thị trang được chọn
+                const targetPage = document.getElementById(`${pageId}View`);
+                if(targetPage) {
+                    targetPage.classList.remove('hidden');
+                }
+            });
+        });
+
+    </script>
+
+</body>
+</html>
