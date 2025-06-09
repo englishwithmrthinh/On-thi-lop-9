@@ -40,13 +40,13 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- ===== Trang Đăng Nhập (Sẽ hiển thị mặc định) ===== -->
+    <!-- ===== Trang Đăng Nhập ===== -->
     <div id="loginPage" class="flex items-center justify-center min-h-screen">
         <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
             <div class="text-center mb-8">
                 <i class="fas fa-graduation-cap text-5xl text-blue-600"></i>
                 <h1 class="text-3xl font-bold text-gray-800 mt-4">Hệ Thống Quản Lý Học Tập</h1>
-                <p class="text-gray-500">Dành cho Lớp học của Thầy Thịnh</p>
+                <p class="text-gray-500">Dành cho Giáo viên & Quản lý</p>
             </div>
             <form id="loginForm">
                 <div class="mb-4">
@@ -111,77 +111,17 @@
                     <h2 id="pageTitle" class="text-2xl font-bold text-gray-800">Tổng quan</h2>
                     <div class="flex items-center">
                         <span id="userDisplayName" class="mr-3"></span>
-                        <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=T" class="rounded-full" alt="Avatar">
+                        <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=GV" class="rounded-full" alt="Avatar">
                     </div>
                 </header>
                 
                 <div id="mainContent" class="flex-1 p-8 overflow-y-auto">
                     <!-- Nội dung của các trang sẽ được hiển thị ở đây -->
-                    <!-- Trang Tổng Quan (Dashboard) -->
-                    <div id="dashboardView" class="page-content">
-                        <h3 class="text-3xl font-bold text-gray-800 mb-6">Chào mừng trở lại!</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="stat-card">
-                                <div class="flex items-center">
-                                    <i class="fas fa-user-graduate text-3xl text-blue-500 bg-blue-100 p-3 rounded-full"></i>
-                                    <div class="ml-4">
-                                        <p class="text-gray-500">Tổng số học sinh</p>
-                                        <p class="text-2xl font-bold">125</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="flex items-center">
-                                    <i class="fas fa-chalkboard text-3xl text-green-500 bg-green-100 p-3 rounded-full"></i>
-                                    <div class="ml-4">
-                                        <p class="text-gray-500">Lớp học</p>
-                                        <p class="text-2xl font-bold">4</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                 <div class="flex items-center">
-                                    <i class="fas fa-file-signature text-3xl text-yellow-500 bg-yellow-100 p-3 rounded-full"></i>
-                                    <div class="ml-4">
-                                        <p class="text-gray-500">Bài tập đã giao</p>
-                                        <p class="text-2xl font-bold">28</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                             <div class="bg-white p-6 rounded-lg shadow-md">
-                                <h4 class="text-xl font-semibold mb-4">Bài tập gần đây</h4>
-                                <ul>
-                                    <li class="flex justify-between py-2 border-b"><span>Bài tập Thì Hiện tại Đơn</span> <span class="text-gray-500">Lớp 9A1</span></li>
-                                    <li class="flex justify-between py-2 border-b"><span>Word Formation - Nouns</span> <span class="text-gray-500">Lớp 9A2</span></li>
-                                    <li class="flex justify-between py-2"><span>Bài tập Giới từ</span> <span class="text-gray-500">Lớp 9A1</span></li>
-                                </ul>
-                            </div>
-                             <div class="bg-white p-6 rounded-lg shadow-md">
-                                <h4 class="text-xl font-semibold mb-4">Thông báo mới</h4>
-                                <p class="text-gray-600">Chưa có thông báo nào.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Các trang khác sẽ được thêm vào đây -->
-                    <div id="classesView" class="page-content hidden">
-                        <h3 class="text-3xl font-bold text-gray-800">Quản lý Lớp học</h3>
-                        <!-- Nội dung quản lý lớp học -->
-                    </div>
-                     <div id="assignmentsView" class="page-content hidden">
-                        <h3 class="text-3xl font-bold text-gray-800">Quản lý Bài tập</h3>
-                        <!-- Nội dung quản lý bài tập -->
-                    </div>
-                    <div id="libraryView" class="page-content hidden">
-                        <h3 class="text-3xl font-bold text-gray-800">Thư viện Tài liệu</h3>
-                        <!-- Nội dung thư viện -->
-                    </div>
-                    <div id="gradesView" class="page-content hidden">
-                        <h3 class="text-3xl font-bold text-gray-800">Bảng điểm</h3>
-                        <!-- Nội dung bảng điểm -->
-                    </div>
+                    <div id="dashboardView" class="page-content"><!-- Nội dung trang tổng quan --></div>
+                    <div id="classesView" class="page-content hidden"><!-- Nội dung quản lý lớp học --></div>
+                    <div id="assignmentsView" class="page-content hidden"><!-- Nội dung quản lý bài tập --></div>
+                    <div id="libraryView" class="page-content hidden"><!-- Nội dung thư viện --></div>
+                    <div id="gradesView" class="page-content hidden"><!-- Nội dung bảng điểm --></div>
                 </div>
             </main>
         </div>
@@ -192,8 +132,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // ===== CẤU HÌNH FIREBASE (ĐÃ SỬA LỖI) =====
-        // Dán mã cấu hình bạn đã lấy từ trang Firebase vào đây
+        // ===== CẤU HÌNH FIREBASE =====
         const firebaseConfig = {
             apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
             authDomain: "on-thi-lop-9.firebaseapp.com",
@@ -220,26 +159,20 @@
         const userDisplayName = document.getElementById('userDisplayName');
 
         // ===== XỬ LÝ XÁC THỰC (Authentication) =====
-
-        // 1. Theo dõi trạng thái đăng nhập
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Người dùng đã đăng nhập
-                console.log("Người dùng đã đăng nhập:", user);
+                // Bất kỳ ai đăng nhập thành công cũng sẽ thấy giao diện quản lý
                 loginPage.classList.add('hidden');
                 mainApp.classList.remove('hidden');
-                userDisplayName.textContent = user.email; // Hiển thị email người dùng
+                userDisplayName.textContent = user.email;
             } else {
-                // Người dùng đã đăng xuất hoặc chưa đăng nhập
-                console.log("Không có người dùng đăng nhập.");
                 mainApp.classList.add('hidden');
                 loginPage.classList.remove('hidden');
             }
         });
 
-        // 2. Xử lý sự kiện đăng nhập
         loginForm.addEventListener('submit', (e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
@@ -249,15 +182,8 @@
             loginError.classList.add('hidden');
 
             signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    console.log("Đăng nhập thành công:", userCredential.user);
-                })
                 .catch((error) => {
-                    console.error("Lỗi đăng nhập:", error.code);
-                    let errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại.";
-                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                        errorMessage = "Email hoặc mật khẩu không đúng.";
-                    }
+                    let errorMessage = "Email hoặc mật khẩu không đúng.";
                     loginError.textContent = errorMessage;
                     loginError.classList.remove('hidden');
                 })
@@ -268,12 +194,8 @@
                 });
         });
 
-        // 3. Xử lý sự kiện đăng xuất
         logoutBtn.addEventListener('click', () => {
-            signOut(auth).catch((error) => {
-                console.error("Lỗi đăng xuất:", error);
-                alert("Đã có lỗi khi đăng xuất.");
-            });
+            signOut(auth).catch((error) => console.error("Lỗi đăng xuất:", error));
         });
 
 
@@ -301,8 +223,6 @@
                 }
             });
         });
-
     </script>
-
 </body>
 </html>
