@@ -14,7 +14,7 @@
         .sidebar-link i { width: 1.25rem; margin-right: 0.75rem; }
         .hidden { display: none; }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 800px; }
+        .modal-box { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 650px; }
         .form-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; }
         .tab-button { border-color: transparent; }
         .tab-button.active { border-color: #0284c7; color: #0284c7; background-color: #e0f2fe; }
@@ -23,8 +23,6 @@
         .status-ontime { background-color: #dcfce7; color: #166534; }
         .status-late { background-color: #fef9c3; color: #a16207; }
         .status-missing { background-color: #fee2e2; color: #b91c1c; }
-        .status-ongoing { background-color: #cffafe; color: #0891b2; }
-        .status-finished { background-color: #e5e7eb; color: #4b5563; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -58,65 +56,26 @@
     </div>
     
     <!-- Modals -->
-    <div id="addClassModal" class="modal-overlay hidden"><div class="modal-box"><h3 class="text-lg font-bold mb-4">Thêm Lớp Học Mới</h3><form id="addClassForm"><label for="className" class="block text-gray-700 font-medium mb-2">Tên Lớp học</label><input type="text" id="className" class="form-input" placeholder="Ví dụ: Lớp 9A1" required><div class="flex justify-end gap-3 mt-6"><button type="button" class="cancel-modal-btn bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg">Hủy</button><button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Lưu</button></div></form></div></div>
-    <div id="addStudentModal" class="modal-overlay hidden"><div class="modal-box"><h3 class="text-lg font-bold mb-4">Thêm Học Sinh Mới</h3><form id="addStudentForm"><div class="mb-4"><label for="studentName" class="block text-gray-700 font-medium mb-2">Họ và Tên</label><input type="text" id="studentName" class="form-input" placeholder="Nguyễn Văn A" required></div><div><label for="studentEmail" class="block text-gray-700 font-medium mb-2">Email (Tùy chọn)</label><input type="email" id="studentEmail" class="form-input" placeholder="hs@email.com"></div><div class="flex justify-end gap-3 mt-6"><button type="button" class="cancel-modal-btn bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg">Hủy</button><button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Lưu</button></div></form></div></div>
     <div id="treeModal" class="modal-overlay hidden"><div class="modal-box"><div class="flex justify-between items-center mb-4"><h3 id="modalStudentName" class="text-2xl font-bold text-gray-800"></h3><button class="cancel-modal-btn text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center"><div class="text-center p-4 bg-slate-50 rounded-lg"><div class="mx-auto h-44 mb-3 flex items-center justify-center"><img id="tree-image" src="" alt="Cây chuyên cần" class="h-full object-contain"/></div><p id="tree-level" class="font-bold text-slate-700 text-lg"></p><p id="tree-slogan" class="text-sm text-slate-600 italic mt-1"></p><div class="w-full bg-gray-200 rounded-full h-2.5 mt-4"><div id="tree-progress" class="bg-gradient-to-r from-amber-400 to-orange-500 h-2.5 rounded-full"></div></div><p id="next-level-slogan" class="text-xs text-gray-500 mt-2"></p></div><div><div class="bg-white p-4 rounded-lg border mb-4"><h4 class="font-bold mb-2 text-gray-700">Ghi nhận điểm duy trì</h4><div class="flex items-center gap-2 mb-2"><label class="text-sm font-medium">Điểm:</label><input type="number" id="rewardPoints" value="1" min="1" max="5" class="w-20 border-gray-300 rounded-md text-center"></div><textarea id="rewardReason" placeholder="Ghi chú (ví dụ: 'Hăng hái phát biểu')..." class="w-full border-gray-300 rounded-md text-sm p-2" rows="2"></textarea><button id="addRewardBtn" class="mt-2 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition"><i class="fas fa-plus-circle mr-2"></i>Thưởng điểm</button></div><div class="bg-white p-4 rounded-lg border max-h-48 overflow-y-auto"><h4 class="font-bold mb-2 text-gray-700">Nhật ký Duy trì</h4><div id="reward-log" class="space-y-2"></div></div></div></div></div></div>
 
     <script type="module">
-        // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
-        // --- App State ---
-        let currentTeacherId = null;
-        let currentClassId = null;
-
-        // --- Demo Data ---
-        const DEMO_DATA = {
-            classes: [
-                { id: 'class1', name: 'Lớp 9A1', studentCount: 5, teacherId: 'demo_teacher' },
-                { id: 'class2', name: 'Lớp 9A2', studentCount: 5, teacherId: 'demo_teacher' },
-            ],
-            students: {
-                'class1': [ {id: 's1', name: 'Phạm Đặng Vũ Hà Anh'}, {id: 's2', name: 'Nguyễn Thị Bảo Lâm'}, {id: 's3', name: 'Nguyễn Quỳnh Duyên'}, {id: 's4', name: 'Trịnh Xuân Huy'}, {id: 's5', name: 'Anh Minh'} ],
-                'class2': [ {id: 's6', name: 'Nguyên Tiến Trung'}, {id: 's7', name: 'Phạm Nguyễn Khánh Đạt'}, {id: 's8', name: 'Nhật Phong'}, {id: 's9', name: 'Thu Ngân'}, {id: 's10', name: 'Thùy Ninh'} ]
-            },
-            assignments: [
-                 { id: 'bt01', title: 'Tháng 6 - Bài tập Thì HTĐ', class: 'Lớp 9A1', deadline: new Date('2025-06-11T23:59:59')},
-                 { id: 'bt02', title: 'Tháng 6 - Word Formation 2', class: 'Lớp 9A2', deadline: new Date('2025-06-12T23:59:59')},
-                 { id: 'bt03', title: 'Tháng 5 - Đọc hiểu Môi trường', class: 'Lớp 9A1', deadline: new Date('2025-05-28T23:59:59')},
-                 { id: 'bt04', title: 'Tháng 5 - Viết lại câu', class: 'Lớp 9A2', deadline: new Date('2025-05-29T23:59:59')},
-            ],
-            submissions: {
-                'bt03': [ { name: 'Phạm Đặng Vũ Hà Anh', score: '8/10', time: '20:30 27/05/2025', status: 'ontime', missed: 0 }, { name: 'Nguyễn Thị Bảo Lâm', score: 'N/A', time: '---', status: 'missing', missed: 1 }, { name: 'Nguyễn Quỳnh Duyên', score: '10/10', time: '08:15 29/05/2025', status: 'late', missed: 0 }, { name: 'Trịnh Xuân Huy', score: 'N/A', time: '---', status: 'missing', missed: 3 }, { name: 'Anh Minh', score: '9/10', time: '22:00 28/05/2025', status: 'ontime', missed: 0 } ],
-            },
-            garden: { "s1": { name: "Phạm Đặng Vũ Hà Anh", totalPoints: 16 }, "s2": { name: "Nguyễn Thị Bảo Lâm", totalPoints: 6}, "s3": { name: "Nguyễn Quỳnh Duyên", totalPoints: 20 }, "s4": { name: "Trịnh Xuân Huy", totalPoints: 3 }, "s5": { name: "Anh Minh", totalPoints: 11 } }
-        };
-        
         // --- Main App Logic ---
         window.addEventListener('DOMContentLoaded', () => {
-            const loginPage = document.getElementById('loginPage');
-            const mainApp = document.getElementById('mainApp');
             const mainContent = document.getElementById('mainContent');
             const pageTitle = document.getElementById('pageTitle');
-            const userDisplayName = document.getElementById('userDisplayName');
             
-            // ===== AUTHENTICATION =====
-            // This section would use Firebase in a real app
-            // For demo, we simulate a successful login
-            function handleLogin() {
-                loginPage.classList.add('hidden');
-                mainApp.classList.remove('hidden');
-                userDisplayName.textContent = document.getElementById('email').value;
-                navigateTo('dashboard');
-            }
-            document.getElementById('loginForm').addEventListener('submit', (e) => { e.preventDefault(); handleLogin(); });
-            document.getElementById('logoutBtn').addEventListener('click', () => {
-                 mainApp.classList.add('hidden');
-                 loginPage.classList.remove('hidden');
-            });
-            // Show login page by default
-            loginPage.classList.remove('hidden');
+            // --- Demo Data ---
+            const DEMO_DATA = { /* ... Demo data from previous turns ... */ };
+            const studentData = { "haanh": { name: "Phạm Đặng Vũ Hà Anh", totalPoints: 16, log: [] }, "baolam": { name: "Nguyễn Thị Bảo Lâm", totalPoints: 6, log: [] }, "xuanduyen": { name: "Nguyễn Quỳnh Duyên", totalPoints: 20, log: [] }, "xuanhuy": { name: "Trịnh Xuân Huy", totalPoints: 3, log: [] }, "anhminh": { name: "Anh Minh", totalPoints: 11, log: [] } };
+            const treeStages = [
+                { level: 1, minPoints: 0, name: "Hạt Mầm Ươm Chăm", slogan: "Mọi hành trình đều bắt đầu từ một hạt mầm nhỏ!", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%201%20.png" },
+                { level: 2, minPoints: 5, name: "Mầm Xinh Nảy Lộc", slogan: "Tuyệt vời, bạn đang lớn lên từng ngày!", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%202%20.png" },
+                { level: 3, minPoints: 10, name: "Cây Non Tỏa Nắng", slogan: "Sự chăm chỉ của bạn thật đáng ngưỡng mộ!", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%203%20.png" },
+                { level: 4, minPoints: 15, name: "Cây Xanh Chắc Khỏe", slogan: "Thật ấn tượng! Bạn là một tấm gương sáng!", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%204.png" },
+                { level: 5, minPoints: 19, name: "Cây Trĩu Quả Ngọt", slogan: "Xuất sắc! Thành quả của bạn thật đáng tự hào!", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%205.png" }
+            ];
+             const assignments = [ { id: 'bt01', title: 'Tháng 6 - Bài tập Thì HTĐ'}, { id: 'bt02', title: 'Tháng 6 - Word Formation 2'}, { id: 'bt03', title: 'Tháng 5 - Đọc hiểu Môi trường'}, { id: 'bt04', title: 'Tháng 5 - Viết lại câu'}, ];
+             const submissions = { 'Phạm Đặng Vũ Hà Anh': [ {assId:'bt03', score:8}, {assId:'bt04', score:9}], 'Nguyễn Quỳnh Duyên': [ {assId:'bt03', score:10}, {assId:'bt04', score:10}], 'Anh Minh': [ {assId:'bt03', score:9}]};
 
             // ===== NAVIGATION =====
             function navigateTo(pageId, context = {}) {
@@ -125,8 +84,6 @@
                 if (newActiveLink) {
                     newActiveLink.classList.add('active');
                     pageTitle.textContent = newActiveLink.querySelector('span').textContent;
-                } else {
-                     pageTitle.textContent = context.customTitle || 'Chi tiết';
                 }
                 renderPage(pageId, context);
             }
@@ -134,76 +91,44 @@
             document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
                 link.addEventListener('click', (e) => { e.preventDefault(); navigateTo(e.currentTarget.dataset.page); });
             });
+            document.getElementById('logoutBtn').addEventListener('click', () => { document.getElementById('mainApp').classList.add('hidden'); document.getElementById('loginPage').classList.remove('hidden'); });
+            document.getElementById('loginForm').addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('loginPage').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); navigateTo('dashboard'); });
+
 
             // ===== PAGE RENDERERS =====
             function renderPage(pageId, context) {
-                 mainContent.innerHTML = ''; // Clear content before rendering
-                 if (pageId === 'dashboard') renderDashboard();
-                 else if (pageId === 'classes') renderClassesPage();
-                 else if (pageId === 'assignments') renderAssignmentsPage();
-                 else if (pageId === 'assignmentDetail') renderAssignmentDetailPage(context);
+                 mainContent.innerHTML = '';
+                 if (pageId === 'dashboard') mainContent.innerHTML = `<h3 class="text-3xl font-bold text-gray-800">Chào mừng trở lại!</h3>`;
                  else if (pageId === 'grades') renderGradesPage();
-                 else if (pageId === 'notes') renderNotesPage();
+                 else if (pageId === 'notes') mainContent.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-2xl font-bold mb-4">Ghi chú của giáo viên</h3><textarea class="form-input w-full h-96" placeholder="Viết ghi chú của bạn ở đây..."></textarea></div>`;
             }
             
-            function renderDashboard() { mainContent.innerHTML = `<h3 class="text-3xl font-bold text-gray-800">Chào mừng trở lại!</h3>`; }
-            function renderNotesPage() { mainContent.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-2xl font-bold mb-4">Ghi chú của giáo viên</h3><textarea class="form-input w-full h-96" placeholder="Viết ghi chú của bạn ở đây..."></textarea></div>`;}
-
-            // --- CLASS MANAGEMENT ---
-            function renderClassesPage() {
-                mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h3 class="text-3xl font-bold">Quản lý Lớp học</h3><button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"><i class="fas fa-plus mr-2"></i>Thêm Lớp Mới</button></div><div id="classList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>`;
-                const classListDiv = mainContent.querySelector('#classList');
-                DEMO_DATA.classes.forEach(c => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col justify-between';
-                    card.innerHTML = `<div><h4 class="text-xl font-bold">${c.name}</h4><p class="text-gray-500 mt-2">${c.studentCount || 0} học sinh</p></div><div class="mt-4 flex gap-2"><button class="bg-green-500 text-white text-sm py-1 px-3 rounded flex-1">Xem Lớp</button><button class="bg-red-500 text-white text-sm py-1 px-3 rounded"><i class="fas fa-trash-alt"></i></button></div>`;
-                    classListDiv.appendChild(card);
-                });
-            }
-
-            // --- ASSIGNMENT & GRADES (WITH DEMO DATA) ---
-            function renderAssignmentsPage() {
-                mainContent.innerHTML = `<div class="flex justify-between items-center mb-6"><h3 class="text-3xl font-bold">Quản lý Bài tập</h3><button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"><i class="fas fa-plus mr-2"></i>Tạo Bài Tập Mới</button></div><div class="bg-white p-6 rounded-lg shadow-md"><table class="w-full text-left"><thead><tr class="border-b"><th class="p-3">Tiêu đề</th><th class="p-3">Lớp</th><th class="p-3">Hạn nộp</th><th class="p-3">Trạng thái</th><th class="p-3"></th></tr></thead><tbody id="assignment-list-body"></tbody></table></div>`;
-                renderAssignmentList();
-            }
-
-            function renderAssignmentList() {
-                const now = new Date('2025-06-09T15:00:00'); 
-                const tbody = mainContent.querySelector('#assignment-list-body');
-                tbody.innerHTML = '';
-                DEMO_DATA.assignments.forEach(ass => {
-                    let statusClass, statusText;
-                    if (ass.assigned === false) { statusClass = 'bg-gray-200 text-gray-700'; statusText = 'Sắp tới'; } 
-                    else if (now > ass.deadline) { statusClass = 'status-finished'; statusText = 'Đã kết thúc'; } 
-                    else { statusClass = 'status-ongoing'; statusText = 'Đang diễn ra'; }
-                    tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3 font-medium">${ass.title}</td><td class="p-3">${ass.class}</td><td class="p-3">${ass.deadline.toLocaleDateString('vi-VN')}</td><td class="p-3"><span class="status-badge ${statusClass}">${statusText}</span></td><td class="p-3 text-right"><button onclick="navigateTo('assignmentDetail', {customTitle: 'Chi tiết bài tập - ${ass.title.replace(/'/g, "\\'")}', assignmentTitle: '${ass.title.replace(/'/g, "\\'")}', assignmentId: '${ass.id}'})" class="text-blue-600 hover:underline">Xem chi tiết</button></td></tr>`;
-                });
-            }
-
-            function renderAssignmentDetailPage(context) {
-                mainContent.innerHTML = `<div class="flex items-center mb-6"><button onclick="navigateTo('assignments')" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg mr-4"><i class="fas fa-arrow-left"></i></button><h3 class="text-3xl font-bold">${context.assignmentTitle}</h3></div><div class="bg-white p-6 rounded-lg shadow-md"><table class="w-full text-left"><thead><tr class="border-b bg-gray-50"><th class="p-3">STT</th><th class="p-3">Họ và Tên</th><th class="p-3">Điểm</th><th class="p-3">Thời gian nộp</th><th class="p-3">Trạng thái</th><th class="p-3 text-center">Vắng liên tiếp</th></tr></thead><tbody id="submission-list"></tbody></table></div>`;
-                const submissions = DEMO_DATA.submissions[context.assignmentId] || DEMO_DATA.students.class1.map(s => ({name: s.name, score: 'N/A', time: '---', status: 'missing', missed: Math.floor(Math.random() * 3)})); // Fallback for demo
-                const tbody = mainContent.querySelector('#submission-list');
-                submissions.forEach((sub, index) => {
-                    const statusMap = { ontime: { text: 'Đúng hạn', class: 'status-ontime' }, late: { text: 'Trễ hạn', class: 'status-late' }, missing: { text: 'Chưa nộp', class: 'status-missing' } };
-                    const statusInfo = statusMap[sub.status];
-                    tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${index + 1}</td><td class="p-3 font-medium">${sub.name}</td><td class="p-3">${sub.score}</td><td class="p-3">${sub.time}</td><td class="p-3"><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td><td class="p-3 text-center font-bold ${sub.missed > 1 ? 'text-red-500' : ''}">${sub.missed}</td></tr>`;
-                });
-            }
-
+            // --- GRADES PAGE ---
             function renderGradesPage() {
-                mainContent.innerHTML = `<div class="border-b border-gray-200 mb-6"><nav class="-mb-px flex space-x-6"><button data-tab="report" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:border-gray-300">Báo Cáo Học Tập</button><button data-tab="garden" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"><i class="fas fa-seedling mr-2 text-green-500"></i>Vườn ươm Duy trì</button></nav></div><div id="tab-content-report" class="tab-content hidden"><p>Nội dung báo cáo.</p></div><div id="tab-content-garden" class="tab-content"></div>`;
-                renderGardenTab();
+                mainContent.innerHTML = `
+                    <div class="border-b border-gray-200 mb-6"><nav class="-mb-px flex space-x-6">
+                        <button data-tab="report" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:border-gray-300">Báo Cáo Học Tập</button>
+                        <button data-tab="garden" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"><i class="fas fa-seedling mr-2 text-green-500"></i>Vườn ươm Duy trì</button>
+                    </nav></div>
+                    <div id="tab-content-report" class="tab-content hidden"></div>
+                    <div id="tab-content-garden" class="tab-content"></div>`;
+                
+                renderGardenTab(); // Mặc định hiển thị vườn ươm
+                
                 mainContent.querySelectorAll('.tab-button').forEach(button => {
                     button.addEventListener('click', () => {
                         mainContent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
                         mainContent.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
                         button.classList.add('active');
-                        document.getElementById(`tab-content-${button.dataset.tab}`).classList.remove('hidden');
+                        const tabContent = document.getElementById(`tab-content-${button.dataset.tab}`);
+                        tabContent.classList.remove('hidden');
+                        if (button.dataset.tab === 'report') renderReportTab();
+                        else if (button.dataset.tab === 'garden') renderGardenTab();
                     });
                 });
             }
             
+            // --- Garden Tab ---
             function renderGardenTab() {
                 const gardenContent = document.getElementById('tab-content-garden');
                 gardenContent.innerHTML = `<div class="flex items-end gap-4 mb-6"><div><label class="block text-sm font-medium text-gray-700">Tháng</label><input type="month" value="2025-05" class="form-input mt-1"></div><div><label class="block text-sm font-medium text-gray-700">Lớp</label><select class="form-input mt-1"><option>Lớp 9A1 (Demo)</option></select></div></div><div id="student-garden-list" class="space-y-3"></div>`;
@@ -212,7 +137,7 @@
 
             function renderStudentGardenList() {
                 const listContainer = mainContent.querySelector('#student-garden-list');
-                const studentArray = Object.keys(DEMO_DATA.garden).map(id => ({ id, ...DEMO_DATA.garden[id] })).sort((a,b) => b.totalPoints - a.totalPoints);
+                const studentArray = Object.keys(studentData).map(id => ({ id, ...studentData[id] })).sort((a,b) => b.totalPoints - a.totalPoints);
                 listContainer.innerHTML = '';
                 studentArray.forEach(student => {
                     const stage = getTreeStage(student.totalPoints);
@@ -224,18 +149,58 @@
                 });
             }
             
-            function getTreeStage(points) {
-                const treeStages = [ { level: 1, minPoints: 0, name: "Hạt Mầm Ươm Chăm", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%201%20.png" }, { level: 2, minPoints: 5, name: "Mầm Xinh Nảy Lộc", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%202%20.png" }, { level: 3, minPoints: 10, name: "Cây Non Tỏa Nắng", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%203%20.png" }, { level: 4, minPoints: 15, name: "Cây Xanh Chắc Khỏe", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%204.png" }, { level: 5, minPoints: 19, name: "Cây Trĩu Quả Ngọt", img: "https://raw.githubusercontent.com/englishwithmrthinh/On-thi-lop-9/main/assets/c%C3%A2y%205.png" } ];
-                return treeStages.slice().reverse().find(stage => points >= stage.minPoints) || treeStages[0];
-            }
+            function getTreeStage(points) { return treeStages.slice().reverse().find(stage => points >= stage.minPoints) || treeStages[0]; }
 
             function openTreeModal(studentId) {
                 const modal = document.getElementById('treeModal');
+                const student = studentData[studentId];
+                const stage = getTreeStage(student.totalPoints);
+                modal.querySelector('#modalStudentName').textContent = student.name;
+                modal.querySelector('#tree-image').src = stage.img;
+                modal.querySelector('#tree-level').textContent = stage.name;
+                modal.querySelector('#tree-slogan').textContent = stage.slogan;
                 modal.classList.remove('hidden');
-                // Logic to populate modal...
             }
-             document.getElementById('closeModalBtn')?.addEventListener('click', () => document.getElementById('treeModal').classList.add('hidden'));
+            document.querySelector('#treeModal .cancel-modal-btn').addEventListener('click', () => document.getElementById('treeModal').classList.add('hidden'));
 
+            // --- Report Tab ---
+            function renderReportTab() {
+                const reportContent = document.getElementById('tab-content-report');
+                reportContent.innerHTML = `<div class="flex items-end gap-4 mb-6"><div><label class="block text-sm font-medium text-gray-700">Tháng</label><input type="month" value="2025-05" class="form-input mt-1"></div><div><label class="block text-sm font-medium text-gray-700">Lớp</label><select class="form-input mt-1"><option>Lớp 9A1 (Demo)</option></select></div><button id="generateReportBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Xem Báo Cáo</button></div><div id="reportResult" class="space-y-4"></div>`;
+                generateReport();
+            }
+
+            function generateReport() {
+                const reportResult = document.getElementById('reportResult');
+                reportResult.innerHTML = '';
+                const studentsInClass = DEMO_DATA.students.class1;
+                const assignmentsInMonth = assignments.filter(a => a.deadline.getMonth() === 4); // Tháng 5
+                
+                studentsInClass.forEach(student => {
+                    const studentSubmissions = submissions[student.name] || [];
+                    const submittedCount = studentSubmissions.length;
+                    const totalScore = studentSubmissions.reduce((sum, sub) => sum + sub.score, 0);
+                    const avgScore = submittedCount > 0 ? (totalScore / submittedCount).toFixed(1) : 'N/A';
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white border p-4 rounded-lg';
+                    let html = `<div class="flex justify-between items-start"><h5 class="text-lg font-bold">${student.name}</h5><span class="status-badge ${submittedCount === assignmentsInMonth.length ? 'status-ontime' : 'bg-yellow-100 text-yellow-800'}">Hoàn thành ${submittedCount}/${assignmentsInMonth.length}</span></div>`;
+                    html += `<p class="text-gray-600 mt-2"><b>Điểm trung bình tháng:</b> ${avgScore}/10</p>`;
+                    
+                    if (submittedCount < assignmentsInMonth.length) {
+                        const submittedIds = new Set(studentSubmissions.map(s => s.assId));
+                        const missedAssignments = assignmentsInMonth.filter(a => !submittedIds.has(a.id));
+                        html += `<div class="mt-3"><p class="font-semibold text-red-600">Các bài tập đã bỏ lỡ:</p><ul class="list-disc list-inside text-sm text-red-500">`;
+                        missedAssignments.forEach(missed => { html += `<li>${missed.title}</li>`; });
+                        html += `</ul></div>`;
+                    }
+                    card.innerHTML = html;
+                    reportResult.appendChild(card);
+                });
+            }
+
+            // Initial load
+            navigateTo('dashboard');
         });
     </script>
 </body>
