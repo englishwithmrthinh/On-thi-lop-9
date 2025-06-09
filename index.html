@@ -95,10 +95,8 @@
             
             const classesView = document.getElementById('classesView');
             const addClassModal = document.getElementById('addClassModal');
-            const addClassBtn = document.getElementById('addClassBtn');
             const cancelAddClassBtn = document.getElementById('cancelAddClassBtn');
             const addClassForm = document.getElementById('addClassForm');
-            const classListDiv = document.getElementById('classList');
             
             const classDetailView = document.getElementById('classDetailView');
             const addStudentModal = document.getElementById('addStudentModal');
@@ -151,7 +149,6 @@
             logoutBtn.addEventListener('click', () => { signOut(auth); });
 
             // ===== QUẢN LÝ LỚP HỌC =====
-            addClassBtn.addEventListener('click', () => addClassModal.classList.remove('hidden'));
             cancelAddClassBtn.addEventListener('click', () => addClassModal.classList.add('hidden'));
 
             addClassForm.addEventListener('submit', async (e) => {
@@ -181,7 +178,7 @@
                     <div id="classList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <p class="text-gray-500">Đang tải danh sách lớp...</p>
                     </div>`;
-                // Re-add event listener for the new button
+                
                 document.getElementById('addClassBtn').addEventListener('click', () => addClassModal.classList.remove('hidden'));
                 
                 const q = query(collection(db, "classes"), where("teacherId", "==", currentTeacherId));
@@ -192,6 +189,7 @@
 
             function renderClasses(classes) {
                 const classListDiv = document.getElementById('classList');
+                if (!classListDiv) return;
                 classListDiv.innerHTML = '';
                 if (classes.length === 0) { classListDiv.innerHTML = '<p class="text-gray-500 col-span-3">Chưa có lớp học nào.</p>'; return; }
                 classes.forEach(c => {
@@ -239,6 +237,7 @@
 
             function renderStudents(students, classId) {
                 const container = document.getElementById('studentListContainer');
+                if (!container) return;
                 container.innerHTML = '';
                 if (students.length === 0) { container.innerHTML = '<p class="text-center text-gray-500 py-4">Chưa có học sinh nào trong lớp này.</p>'; return; }
                 const table = document.createElement('table');
