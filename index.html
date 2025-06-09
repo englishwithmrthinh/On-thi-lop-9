@@ -193,16 +193,15 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // ===== CẤU HÌNH FIREBASE (Rất quan trọng!) =====
-        // Bạn hãy dán mã cấu hình Firebase của mình vào đây.
-        // Mã này có thể lấy từ Bước 4 trong hướng dẫn tôi đã gửi trước đó.
-      const firebaseConfig = {
-    apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
-    authDomain: "on-thi-lop-9.firebaseapp.com",
-    projectId: "on-thi-lop-9",
-    storageBucket: "on-thi-lop-9.firebasestorage.app",
-    messagingSenderId: "936307604820",
-    appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
-    measurementId: "G-EZCY46FJZV"
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
+            authDomain: "on-thi-lop-9.firebaseapp.com",
+            projectId: "on-thi-lop-9",
+            storageBucket: "on-thi-lop-9.appspot.com",
+            messagingSenderId: "936307604820",
+            appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
+            measurementId: "G-EZCY46FJZV"
+        }; // <-- LỖI CỦA BẠN LÀ THIẾU DẤU NÀY
 
         // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
