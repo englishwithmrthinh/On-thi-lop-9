@@ -87,23 +87,19 @@
 
         // --- WRAP ALL LOGIC IN DOMCONTENTLOADED ---
         window.addEventListener('DOMContentLoaded', () => {
-            // ===== Lấy các phần tử HTML =====
             const loginPage = document.getElementById('loginPage');
             const mainApp = document.getElementById('mainApp');
             const loginForm = document.getElementById('loginForm');
             const logoutBtn = document.getElementById('logoutBtn');
             const userDisplayName = document.getElementById('userDisplayName');
             
-            // Classes View
             const classesView = document.getElementById('classesView');
             const addClassModal = document.getElementById('addClassModal');
             const addClassBtn = document.getElementById('addClassBtn');
             const cancelAddClassBtn = document.getElementById('cancelAddClassBtn');
             const addClassForm = document.getElementById('addClassForm');
             const classListDiv = document.getElementById('classList');
-            const addClassError = document.getElementById('addClassError');
-
-            // Class Detail View
+            
             const classDetailView = document.getElementById('classDetailView');
             const addStudentModal = document.getElementById('addStudentModal');
             const cancelAddStudentBtn = document.getElementById('cancelAddStudentBtn');
@@ -112,7 +108,6 @@
             let currentTeacherId = null;
             let currentClassId = null;
 
-            // ===== XỬ LÝ XÁC THỰC (Authentication) =====
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     currentTeacherId = user.uid;
@@ -161,11 +156,14 @@
 
             addClassForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const className = document.getElementById('className').value.trim();
+                const classNameInput = document.getElementById('className');
+                const addClassError = document.getElementById('addClassError');
+                const className = classNameInput.value.trim();
+                addClassError.classList.add('hidden');
                 if (!className) { addClassError.textContent = "Tên lớp không được để trống."; addClassError.classList.remove('hidden'); return; }
                 try {
                     await addDoc(collection(db, "classes"), { name: className, teacherId: currentTeacherId, studentCount: 0 });
-                    document.getElementById('className').value = '';
+                    classNameInput.value = '';
                     addClassModal.classList.add('hidden');
                     fetchClasses();
                 } catch (error) { console.error("Lỗi thêm lớp học:", error); }
@@ -173,7 +171,19 @@
 
             async function fetchClasses() {
                 if (!currentTeacherId) return;
-                classListDiv.innerHTML = '<p class="text-gray-500">Đang tải danh sách lớp...</p>';
+                classesView.innerHTML = `
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-3xl font-bold text-gray-800">Quản lý Lớp học</h3>
+                        <button id="addClassBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-plus mr-2"></i>Thêm Lớp Mới
+                        </button>
+                    </div>
+                    <div id="classList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <p class="text-gray-500">Đang tải danh sách lớp...</p>
+                    </div>`;
+                // Re-add event listener for the new button
+                document.getElementById('addClassBtn').addEventListener('click', () => addClassModal.classList.remove('hidden'));
+                
                 const q = query(collection(db, "classes"), where("teacherId", "==", currentTeacherId));
                 const querySnapshot = await getDocs(q);
                 const classes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -181,6 +191,7 @@
             }
 
             function renderClasses(classes) {
+                const classListDiv = document.getElementById('classList');
                 classListDiv.innerHTML = '';
                 if (classes.length === 0) { classListDiv.innerHTML = '<p class="text-gray-500 col-span-3">Chưa có lớp học nào.</p>'; return; }
                 classes.forEach(c => {
@@ -198,10 +209,10 @@
                 document.querySelectorAll('.view-class-btn').forEach(btn => btn.addEventListener('click', (e) => { const classId = e.currentTarget.dataset.id; const className = e.currentTarget.dataset.name; viewClassDetails(classId, className); }));
             }
             
-            // ===== QUẢN LÝ HỌC SINH (TRONG LỚP CHI TIẾT) =====
+            // ===== QUẢN LÝ HỌC SINH =====
             function viewClassDetails(classId, className) {
                 currentClassId = classId;
-                navigateTo('classDetail');
+                navigateTo('classDetail', `Lớp: ${className}`);
                 classDetailView.innerHTML = `
                     <div class="flex items-center mb-6">
                         <button id="backToClassesBtn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 mr-4"><i class="fas fa-arrow-left"></i></button>
@@ -250,8 +261,10 @@
 
             addStudentForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const studentName = document.getElementById('studentName').value.trim();
-                const studentEmail = document.getElementById('studentEmail').value.trim();
+                const studentNameInput = document.getElementById('studentName');
+                const studentEmailInput = document.getElementById('studentEmail');
+                const studentName = studentNameInput.value.trim();
+                const studentEmail = studentEmailInput.value.trim();
                 if (!studentName) { return; }
                 try {
                     const studentsColRef = collection(db, "classes", currentClassId, "students");
@@ -279,18 +292,25 @@
             const pageTitle = document.getElementById('pageTitle');
             const pageContents = document.querySelectorAll('.page-content');
             
-            function navigateTo(pageId) {
-                document.querySelector('.sidebar-link.active').classList.remove('active');
-                const newActiveLink = document.querySelector(`.sidebar-link[data-page="${pageId}"]`);
-                if (newActiveLink) {
-                    newActiveLink.classList.add('active');
-                    pageTitle.textContent = newActiveLink.querySelector('span').textContent;
-                }
+            function navigateTo(pageId, customTitle = null) {
                 pageContents.forEach(page => page.classList.add('hidden'));
                 const targetPage = document.getElementById(`${pageId}View`);
-                if(targetPage) {
+                if (targetPage) {
                     targetPage.classList.remove('hidden');
-                    if (pageId === 'classes') { fetchClasses(); }
+                }
+                
+                const newActiveLink = document.querySelector(`.sidebar-link[data-page="${pageId}"]`);
+                if (newActiveLink) {
+                    const currentActiveLink = document.querySelector('.sidebar-link.active');
+                    if (currentActiveLink) currentActiveLink.classList.remove('active');
+                    newActiveLink.classList.add('active');
+                    pageTitle.textContent = newActiveLink.querySelector('span').textContent;
+                } else if (customTitle) {
+                    pageTitle.textContent = customTitle;
+                }
+                
+                if (pageId === 'classes') {
+                    fetchClasses();
                 }
             }
 
