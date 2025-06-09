@@ -40,8 +40,8 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- ===== Trang Đăng Nhập ===== -->
-    <div id="loginPage" class="hidden flex items-center justify-center min-h-screen">
+    <!-- ===== Trang Đăng Nhập (Sẽ hiển thị mặc định) ===== -->
+    <div id="loginPage" class="flex items-center justify-center min-h-screen">
         <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
             <div class="text-center mb-8">
                 <i class="fas fa-graduation-cap text-5xl text-blue-600"></i>
@@ -192,7 +192,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // ===== CẤU HÌNH FIREBASE (Rất quan trọng!) =====
+        // ===== CẤU HÌNH FIREBASE (ĐÃ SỬA LỖI) =====
+        // Dán mã cấu hình bạn đã lấy từ trang Firebase vào đây
         const firebaseConfig = {
             apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
             authDomain: "on-thi-lop-9.firebaseapp.com",
@@ -201,7 +202,7 @@
             messagingSenderId: "936307604820",
             appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
             measurementId: "G-EZCY46FJZV"
-        }; // <-- LỖI CỦA BẠN LÀ THIẾU DẤU NÀY
+        };
 
         // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
@@ -238,12 +239,10 @@
 
         // 2. Xử lý sự kiện đăng nhập
         loginForm.addEventListener('submit', (e) => {
-            e.preventDefault(); // Ngăn form tự gửi đi
-
+            e.preventDefault(); 
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            // Vô hiệu hóa nút bấm và hiển thị spinner
             loginBtn.disabled = true;
             loginBtnText.textContent = "Đang xử lý...";
             loginSpinner.classList.remove('hidden');
@@ -251,12 +250,9 @@
 
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Đăng nhập thành công, onAuthStateChanged sẽ tự động xử lý
-                    const user = userCredential.user;
-                    console.log("Đăng nhập thành công:", user);
+                    console.log("Đăng nhập thành công:", userCredential.user);
                 })
                 .catch((error) => {
-                    // Xử lý lỗi
                     console.error("Lỗi đăng nhập:", error.code);
                     let errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại.";
                     if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
@@ -266,7 +262,6 @@
                     loginError.classList.remove('hidden');
                 })
                 .finally(() => {
-                    // Bật lại nút bấm và ẩn spinner
                     loginBtn.disabled = false;
                     loginBtnText.textContent = "Đăng Nhập";
                     loginSpinner.classList.add('hidden');
@@ -292,20 +287,14 @@
                 if (this.id === 'logoutBtn') return;
                 e.preventDefault();
 
-                // Bỏ active ở link cũ
                 document.querySelector('.sidebar-link.active').classList.remove('active');
-                // Thêm active cho link mới
                 this.classList.add('active');
                 
                 const pageId = this.dataset.page;
 
-                // Cập nhật tiêu đề trang
                 pageTitle.textContent = this.querySelector('span').textContent;
-
-                // Ẩn tất cả các trang
                 pageContents.forEach(page => page.classList.add('hidden'));
 
-                // Hiển thị trang được chọn
                 const targetPage = document.getElementById(`${pageId}View`);
                 if(targetPage) {
                     targetPage.classList.remove('hidden');
