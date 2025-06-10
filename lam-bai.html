@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài Tập Tương Tác</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #f0f4f8; }
+        .option-btn { border: 2px solid #e5e7eb; transition: all 0.2s; }
+        .option-btn.selected { border-color: #4f46e5; background-color: #eef2ff; }
+        .option-btn.correct { border-color: #16a34a; background-color: #f0fdf4; color: #15803d; }
+        .option-btn.incorrect { border-color: #dc2626; background-color: #fef2f2; color: #b91c1c; }
+        .hidden { display: none; }
+        .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 50;}
+    </style>
+</head>
+<body class="text-gray-800">
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div id="loadingScreen" class="text-center py-20">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i>
+            <p class="mt-4 text-lg text-gray-600">Đang tải bài tập...</p>
+        </div>
+        <div id="errorScreen" class="hidden text-center py-20 bg-white rounded-xl shadow-md">
+             <i class="fas fa-exclamation-triangle text-5xl text-red-500"></i>
+             <h2 class="mt-4 text-2xl font-bold">Không tìm thấy bài tập</h2>
+             <p class="text-gray-500 mt-2">Đường link này không hợp lệ hoặc bài tập đã bị xóa. Vui lòng kiểm tra lại.</p>
+        </div>
+        
+        <!-- Login Screen for Student -->
+        <div id="loginScreen" class="hidden bg-white p-8 text-center rounded-xl shadow-lg">
+             <h1 id="assignmentTitleLogin" class="text-3xl font-bold text-gray-900 mb-2"></h1>
+             <p class="text-gray-600 mb-6">Nhập tên của bạn để bắt đầu làm bài. Bạn có <span id="timeLimitLogin" class="font-bold"></span> phút để hoàn thành.</p>
+             <div class="max-w-sm mx-auto">
+                 <input type="text" id="studentName" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4" placeholder="Ví dụ: Nguyễn Văn An">
+                 <button id="startQuizBtn" class="w-full bg-indigo-600 text-white py-3 rounded-lg text-lg font-bold hover:bg-indigo-700">Bắt đầu</button>
+             </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="hidden">
+            <div class="bg-white p-6 md:p-8 mb-6 rounded-xl shadow-lg">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="questionNumber" class="text-xl font-bold text-indigo-700"></h2>
+                    <div class="text-xl font-bold px-4 py-2 bg-indigo-100 text-indigo-800 rounded-lg">
+                        <i class="far fa-clock mr-2"></i><span id="time"></span>
+                    </div>
+                </div>
+                <p id="questionText" class="text-lg md:text-xl text-gray-900 mb-6"></p>
+                <div id="optionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+            <div class="flex justify-between">
+                <button id="prevBtn" class="bg-gray-200 text-gray-700 py-2 px-6 rounded-lg font-semibold hover:bg-gray-300"><i class="fas fa-arrow-left mr-2"></i>Trước</button>
+                <button id="nextBtn" class="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700">Tiếp<i class="fas fa-arrow-right ml-2"></i></button>
+                <button id="submitBtn" class="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 hidden">Nộp bài</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="resultsModal" class="modal-backdrop hidden">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b"><h2 class="text-2xl font-bold text-center">Kết quả bài làm</h2></div>
+            <div class="p-6 overflow-y-auto">
+                <div class="text-center mb-6"><p class="text-lg">Học sinh: <span id="resultName" class="font-bold"></span></p><p class="text-4xl font-bold my-2"><span id="resultScore" class="text-indigo-600"></span></p><div id="motivationalMessage" class="mt-4 p-3 rounded-lg text-base font-semibold"></div></div>
+                <div><h3 class="text-xl font-bold mb-4 text-center">Xem lại đáp án</h3><div id="explanationContainer" class="space-y-6"></div></div>
+            </div>
+             <div class="p-4 bg-gray-50 border-t text-center"><button id="closeResultsBtn" class="bg-gray-700 text-white py-2 px-6 rounded-lg">Đóng</button></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvsfpmYYWL5WCLFDLr1gnqBanzz3Ot8lY",
+            authDomain: "on-thi-lop-9.firebaseapp.com",
+            projectId: "on-thi-lop-9",
+            storageBucket: "on-thi-lop-9.appspot.com",
+            messagingSenderId: "936307604820",
+            appId: "1:936307604820:web:a5c5c552e5521e79739cc1",
+            measurementId: "G-EZCY46FJZV"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- State Management ---
+        let assignmentData = null;
+        let userAnswers = [];
+        let currentQuestionIndex = 0;
+        let timerInterval;
+
+        // --- DOM Elements ---
+        const appEl = document.getElementById('app');
+        
+        async function main() {
+            await signInAnonymously(auth); // Ensure user is authenticated to read data
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const assignmentId = urlParams.get('id');
+
+            if (!assignmentId) {
+                showError("Đường link không hợp lệ."); return;
+            }
+
+            try {
+                const docRef = doc(db, "assignments", assignmentId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    assignmentData = { id: docSnap.id, ...docSnap.data() };
+                    userAnswers = new Array(assignmentData.questions.length).fill(null);
+                    showLogin();
+                } else {
+                    showError("Bài tập không tồn tại.");
+                }
+            } catch (error) {
+                console.error("Lỗi tải bài tập:", error);
+                showError("Lỗi khi tải dữ liệu bài tập.");
+            }
+        }
+
+        function showError(message) {
+            appEl.innerHTML = `<div class="text-center py-20 bg-white rounded-xl shadow-md"><i class="fas fa-exclamation-triangle text-5xl text-red-500"></i><h2 class="mt-4 text-2xl font-bold">Đã có lỗi xảy ra</h2><p class="text-gray-500 mt-2">${message}</p></div>`;
+        }
+
+        function showLogin() {
+            appEl.innerHTML = `
+                <div class="bg-white p-8 text-center rounded-xl shadow-lg">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">${assignmentData.title}</h1>
+                    <p class="text-gray-600 mb-6">Nhập tên của bạn để bắt đầu. Bạn có <span class="font-bold">${assignmentData.timeLimit}</span> phút để hoàn thành.</p>
+                    <div class="max-w-sm mx-auto">
+                        <input type="text" id="studentName" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm" placeholder="Ví dụ: Nguyễn Văn An">
+                        <button id="startQuizBtn" class="mt-4 btn-primary w-full py-3 rounded-lg text-lg font-bold">Bắt đầu</button>
+                    </div>
+                </div>`;
+            document.getElementById('startQuizBtn').addEventListener('click', startQuiz);
+        }
+
+        function startQuiz() {
+            const studentName = document.getElementById('studentName').value.trim();
+            if (!studentName) { alert('Vui lòng nhập tên của bạn.'); return; }
+            assignmentData.studentName = studentName;
+            
+            showQuizUI();
+            displayQuestion(0);
+            startTimer();
+        }
+
+        function showQuizUI() {
+             appEl.innerHTML = document.getElementById('quizScreen').innerHTML;
+             document.querySelectorAll('#app button').forEach(btn => {
+                if(btn.id === 'nextBtn') btn.onclick = nextQuestion;
+                if(btn.id === 'prevBtn') btn.onclick = prevQuestion;
+                if(btn.id === 'submitBtn') btn.onclick = submitQuiz;
+             });
+        }
+        
+        function displayQuestion(index) {
+            const questionData = assignmentData.questions[index];
+            document.getElementById('questionNumber').textContent = `Câu ${index + 1} / ${assignmentData.questions.length}`;
+            document.getElementById('questionText').innerHTML = questionData.text.replace(/\n/g, '<br>');
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            if (questionData.type === 'trắc nghiệm') {
+                 const optionLetters = ['A', 'B', 'C', 'D'];
+                 optionLetters.forEach(letter => {
+                    if (questionData.options[letter]) {
+                        const button = document.createElement('button');
+                        button.className = 'option-btn w-full text-left p-4 rounded-lg';
+                        button.innerHTML = `<span class="font-bold mr-3">${letter}.</span> ${questionData.options[letter]}`;
+                        button.dataset.option = letter;
+                        if (userAnswers[index] === letter) button.classList.add('selected');
+                        button.onclick = () => selectOption(button, letter);
+                        optionsContainer.appendChild(button);
+                    }
+                 });
+            } else if (questionData.type === 'điền từ') {
+                 optionsContainer.innerHTML = `<input type="text" class="form-input w-full" placeholder="Nhập đáp án của bạn..." value="${userAnswers[index] || ''}">`;
+                 optionsContainer.querySelector('input').oninput = (e) => userAnswers[index] = e.target.value;
+            }
+            updateNavButtons();
+        }
+
+        function selectOption(button, option) {
+            userAnswers[currentQuestionIndex] = option;
+            document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+        }
+
+        function updateNavButtons() {
+            document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+            document.getElementById('prevBtn').classList.toggle('opacity-50', currentQuestionIndex === 0);
+            const isLastQuestion = currentQuestionIndex === assignmentData.questions.length - 1;
+            document.getElementById('nextBtn').classList.toggle('hidden', isLastQuestion);
+            document.getElementById('submitBtn').classList.toggle('hidden', !isLastQuestion);
+        }
+        
+        function nextQuestion() { if (currentQuestionIndex < assignmentData.questions.length - 1) { currentQuestionIndex++; displayQuestion(currentQuestionIndex); } }
+        function prevQuestion() { if (currentQuestionIndex > 0) { currentQuestionIndex--; displayQuestion(currentQuestionIndex); } }
+
+        function startTimer() { /* ... Timer logic ... */ }
+
+        async function submitQuiz() {
+            clearInterval(timerInterval);
+            let score = 0;
+            assignmentData.questions.forEach((q, i) => {
+                if(q.type === 'điền từ' && userAnswers[i]?.toLowerCase() === q.correctAnswer.toLowerCase()) score++;
+                else if (q.type === 'trắc nghiệm' && userAnswers[i] === q.correctAnswer) score++;
+            });
+
+            await addDoc(collection(db, `submissions`), {
+                assignmentId: assignmentData.id,
+                studentName: assignmentData.studentName,
+                score: score,
+                totalQuestions: assignmentData.questions.length,
+                submittedAt: serverTimestamp()
+            });
+            showResults(score);
+        }
+
+        function showResults(score) {
+            appEl.innerHTML = document.getElementById('resultsModal').innerHTML;
+            document.getElementById('resultName').textContent = assignmentData.studentName;
+            document.getElementById('resultScore').textContent = `${score} / ${assignmentData.questions.length}`;
+            
+            const explanationContainer = document.getElementById('explanationContainer');
+            explanationContainer.innerHTML = '';
+            assignmentData.questions.forEach((q, index) => {
+                 const isCorrect = userAnswers[index]?.toLowerCase() === q.correctAnswer.toLowerCase();
+                 const resultCard = document.createElement('div');
+                 resultCard.className = `p-4 border rounded-lg ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
+                 resultCard.innerHTML = `
+                     <p class="font-semibold mb-2">Câu ${index + 1}: ${q.text.replace(/\n/g, '<br>')}</p>
+                     <p class="mb-1">Lựa chọn của bạn: <span class="font-bold">${userAnswers[index] || 'Chưa trả lời'}</span> ${isCorrect ? '<i class="fas fa-check-circle text-green-600"></i>' : '<i class="fas fa-times-circle text-red-600"></i>'}</p>
+                     ${!isCorrect ? `<p class="mb-2">Đáp án đúng: <span class="font-bold">${q.correctAnswer}</span></p>` : ''}
+                     <div class="mt-2 pt-2 border-t border-gray-300"><p class="text-sm text-gray-700">${q.explanation || ''}</p></div>
+                 `;
+                 explanationContainer.appendChild(resultCard);
+            });
+            document.getElementById('closeResultsBtn').onclick = () => appEl.innerHTML = `<div class="text-center py-20 bg-white rounded-xl shadow-md"><h2 class="text-2xl font-bold">Cảm ơn bạn đã hoàn thành bài tập!</h2></div>`;
+        }
+        
+        main();
+    </script>
+</body>
+</html>
